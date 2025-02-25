@@ -1,36 +1,114 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import API_BASE_URL from "../config";
+
+const apiUrl = `${API_BASE_URL}/api/zones`;
 
 function CreateZone() {
   const [zones, setZones] = useState([]);
   const [zoneName, setZoneName] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
+  const [cities, setCities] = useState([]);
+  const [editingZone, setEditingZone] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  // Dummy list of cities (replace with API call if needed)
-  const cities = [
-    { id: 1, name: "New York" },
-    { id: 2, name: "Los Angeles" },
-    { id: 3, name: "Chicago" },
-  ];
+  useEffect(() => {
+    fetchCities();
+    fetchZones();
+  }, []);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (zoneName.trim() && selectedCity) {
-      setZones([
-        ...zones,
-        { id: zones.length + 1, city: selectedCity, name: zoneName },
-      ]);
-      setZoneName("");
-      setSelectedCity("");
+  const fetchCities = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/cities`);
+      setCities(response.data);
+    } catch (error) {
+      console.error("Error fetching cities:", error);
     }
   };
 
-  const handleDelete = (id) => {
-    setZones(zones.filter((zone) => zone.id !== id));
+  const fetchZones = async () => {
+    try {
+      const response = await axios.get(apiUrl);
+      setZones(response.data);
+    } catch (error) {
+      console.error("Error fetching zones:", error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMessage(""); // Clear previous errors
+
+    try {
+      if (editingZone) {
+        // Update existing zone
+        await axios.put(`${apiUrl}/${editingZone.zone_id}`, {
+          city_id: selectedCity,
+          zone_name: zoneName,
+        });
+        setZones((prevZones) =>
+          prevZones.map((zone) =>
+            zone.zone_id === editingZone.zone_id
+              ? { ...zone, zone_name: zoneName, city_id: selectedCity }
+              : zone
+          )
+        );
+      } else {
+        // Add new zone
+        const response = await axios.post(apiUrl, {
+          city_id: selectedCity,
+          zone_name: zoneName,
+        });
+        setZones([...zones, response.data]);
+      }
+
+      // Reset form
+      resetForm();
+      fetchZones(); // Refresh zone list
+    } catch (error) {
+      if (error.response) {
+        const errCode = error.response.data.code;
+
+        if (errCode === "23505") {
+          setErrorMessage("⚠️ Zone already exists for this city.");
+        } else {
+          setErrorMessage("⚠️ Error saving zone. Please try again.");
+        }
+      } else {
+        setErrorMessage("⚠️ Network error. Please check your connection.");
+      }
+      console.error("Error saving zone:", error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${apiUrl}/${id}`);
+      setZones(zones.filter((zone) => zone.zone_id !== id));
+    } catch (error) {
+      console.error("Error deleting zone:", error);
+    }
+  };
+
+  const handleEdit = (zone) => {
+    setEditingZone(zone);
+    setZoneName(zone.zone_name);
+    setSelectedCity(zone.city_id); // Ensure city selection updates correctly
+  };
+
+  const resetForm = () => {
+    setZoneName("");
+    setSelectedCity("");
+    setEditingZone(null);
   };
 
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">📍 Manage Zones</h2>
+
+      {/* Error Alert */}
+      {errorMessage && <div className="text-red-600 mb-3">{errorMessage}</div>}
+
       <form onSubmit={handleSubmit} className="mb-4 flex flex-col gap-3">
         {/* City Selection Dropdown */}
         <select
@@ -39,10 +117,12 @@ function CreateZone() {
           className="p-2 border rounded w-full"
           required
         >
-          <option value="">Select City</option>
+          <option value="" disabled>
+            Select City
+          </option>
           {cities.map((city) => (
-            <option key={city.id} value={city.name}>
-              {city.name}
+            <option key={city.city_id} value={city.city_id}>
+              {city.city_name}
             </option>
           ))}
         </select>
@@ -57,30 +137,62 @@ function CreateZone() {
           required
         />
 
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Add Zone
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            className={`px-4 py-2 rounded ${
+              selectedCity && zoneName
+                ? "bg-blue-500 text-white"
+                : "bg-gray-400 text-gray-700 cursor-not-allowed"
+            }`}
+            disabled={!selectedCity || !zoneName} // Disable if any field is empty
+          >
+            {editingZone ? "Update Zone" : "Add Zone"}
+          </button>
+          {editingZone && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="bg-gray-500 text-white px-4 py-2 rounded"
+            >
+              Reset
+            </button>
+          )}
+        </div>
       </form>
 
-      {/* Zone List */}
-      <ul>
-        {zones.map((zone) => (
-          <li key={zone.id} className="flex justify-between border-b py-2">
-            <span>
-              🌆 <strong>{zone.city}</strong> - {zone.name}
-            </span>
-            <button
-              onClick={() => handleDelete(zone.id)}
-              className="bg-red-500 text-white px-2 py-1 rounded"
-            >
-              ❌
-            </button>
-          </li>
-        ))}
-      </ul>
+      {/* Zone Table */}
+      <table className="w-full bg-white shadow-md rounded-lg">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="p-3">City</th>
+            <th className="p-3">Zone</th>
+            <th className="p-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {zones.map((zone) => (
+            <tr key={zone.zone_id} className="border-b text-center">
+              <td className="p-3">{zone.city_name}</td>
+              <td className="p-3">{zone.zone_name}</td>
+              <td className="p-3">
+                <button
+                  onClick={() => handleEdit(zone)}
+                  className="bg-yellow-500 text-white px-2 py-1 rounded mr-2"
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(zone.zone_id)}
+                  className="bg-red-500 text-white px-2 py-1 rounded"
+                >
+                  ❌ Delete
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

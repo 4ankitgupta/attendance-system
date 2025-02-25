@@ -1,39 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import API_BASE_URL from "../config";
 
-const initialEmployees = [
-  {
-    emp_id: 1,
-    name: "John Doe",
-    emp_code: "B123",
-    phone: "9876543210",
-    ward_id: 1,
-    designation_id: 2,
-  },
-  {
-    emp_id: 2,
-    name: "Jane Smith",
-    emp_code: "B456",
-    phone: "9123456789",
-    ward_id: 2,
-    designation_id: 3,
-  },
-];
-
-// Static dropdown values (replace with API call later)
-const wards = [
-  { id: 1, name: "Ward 1" },
-  { id: 2, name: "Ward 2" },
-];
-
-const designations = [
-  { id: 1, name: "Nurse" },
-  { id: 2, name: "Doctor" },
-  { id: 3, name: "Technician" },
-];
+const apiUrl = `${API_BASE_URL}/api/employees`;
 
 function Employees() {
-  const [employees, setEmployees] = useState(initialEmployees);
-  const [editingEmployee, setEditingEmployee] = useState(null); // Track employee being edited
+  const [employees, setEmployees] = useState([]);
+  const [editingEmployee, setEditingEmployee] = useState(null);
   const [newEmployee, setNewEmployee] = useState({
     emp_id: "",
     name: "",
@@ -43,28 +16,12 @@ function Employees() {
     designation_id: "",
   });
 
-  const deleteEmployee = (emp_id) => {
-    setEmployees((prev) => prev.filter((emp) => emp.emp_id !== emp_id));
-  };
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
-  const addOrUpdateEmployee = () => {
-    if (!newEmployee.name.trim() || !newEmployee.emp_code.trim()) return;
-
-    if (editingEmployee) {
-      // Update existing employee
-      setEmployees((prev) =>
-        prev.map((emp) =>
-          emp.emp_id === editingEmployee ? { ...newEmployee } : emp
-        )
-      );
-    } else {
-      // Add new employee
-      setEmployees([
-        ...employees,
-        { ...newEmployee, emp_id: employees.length + 1 },
-      ]);
-    }
-
+  const resetLable = () => {
+    // Reset the newEmployee object to its default values
     setNewEmployee({
       emp_id: "",
       name: "",
@@ -73,13 +30,70 @@ function Employees() {
       ward_id: "",
       designation_id: "",
     });
+    // Reset editingEmployee to null so that the Add Employee button appears
     setEditingEmployee(null);
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get(apiUrl);
+      setEmployees(response.data);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+    }
+  };
+
+  const addOrUpdateEmployee = async () => {
+    if (!newEmployee.name.trim() || !newEmployee.emp_code.trim()) return;
+
+    try {
+      if (editingEmployee) {
+        // Update existing employee
+        await axios.put(`${apiUrl}/${newEmployee.emp_id}`, newEmployee);
+      } else {
+        // Add new employee
+        await axios.post(apiUrl, newEmployee);
+      }
+      fetchEmployees(); // Refresh the employee list
+      setNewEmployee({
+        emp_id: "",
+        name: "",
+        emp_code: "",
+        phone: "",
+        ward_id: "",
+        designation_id: "",
+      });
+      setEditingEmployee(null);
+    } catch (error) {
+      console.error("Error saving employee:", error);
+    }
+  };
+
+  const deleteEmployee = async (emp_id) => {
+    try {
+      await axios.delete(`${apiUrl}/${emp_id}`);
+      fetchEmployees(); // Refresh the employee list
+    } catch (error) {
+      console.error("Error deleting employee:", error);
+    }
   };
 
   const editEmployee = (emp) => {
     setNewEmployee(emp);
     setEditingEmployee(emp.emp_id);
   };
+
+  // Static dropdown values (replace with API call later)
+  const wards = [
+    { id: 1, name: "Ward 1" },
+    { id: 2, name: "Ward 2" },
+  ];
+
+  const designations = [
+    { id: 1, name: "Nurse" },
+    { id: 2, name: "Doctor" },
+    { id: 3, name: "Technician" },
+  ];
 
   return (
     <div className="p-5">
@@ -164,9 +178,15 @@ function Employees() {
 
         <button
           onClick={addOrUpdateEmployee}
-          className="bg-blue-500 text-white px-4 py-2 rounded shadow-md mt-4"
+          className="bg-blue-500 text-white px-4 py-2 rounded shadow-md mt-4 mr-4"
         >
           {editingEmployee ? "Update Employee" : "➕ Add Employee"}
+        </button>
+        <button
+          onClick={resetLable}
+          className="bg-blue-500 text-white px-4 py-2 rounded shadow-md mt-4"
+        >
+          Reset
         </button>
       </div>
 
@@ -174,9 +194,8 @@ function Employees() {
       <table className="w-full bg-white shadow-md rounded-lg">
         <thead>
           <tr className="bg-gray-200">
-            <th className="p-3">Emp ID</th>
-            <th className="p-3">Name</th>
             <th className="p-3">Emp Code</th>
+            <th className="p-3">Name</th>
             <th className="p-3">Phone</th>
             <th className="p-3">Ward</th>
             <th className="p-3">Designation</th>
@@ -186,9 +205,8 @@ function Employees() {
         <tbody>
           {employees.map((emp) => (
             <tr key={emp.emp_id} className="border-b">
-              <td className="p-3">{emp.emp_id}</td>
-              <td className="p-3">{emp.name}</td>
               <td className="p-3">{emp.emp_code}</td>
+              <td className="p-3">{emp.name}</td>
               <td className="p-3">{emp.phone}</td>
               <td className="p-3">
                 {wards.find((w) => w.id === emp.ward_id)?.name || "Unknown"}
