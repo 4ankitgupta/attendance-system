@@ -1,32 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import API_BASE_URL from "../config";
 
-const initialSupervisors = [
-  {
-    id: 1,
-    name: "Alice Brown",
-    email: "alice@example.com",
-    phone: "1234567890",
-    role: "supervisor",
-  },
-  {
-    id: 2,
-    name: "Michael Johnson",
-    email: "michael@example.com",
-    phone: "9876543210",
-    role: "admin",
-  },
-];
+const apiUrl = `${API_BASE_URL}/api/supervisor`;
 
 function Supervisors() {
-  const [supervisors, setSupervisors] = useState(initialSupervisors);
+  const [supervisors, setSupervisors] = useState([]);
   const [formData, setFormData] = useState({
     id: "",
     name: "",
+    emp_code: "",
     email: "",
     phone: "",
     role: "supervisor",
+    password: "",
+    confirmPassword: "",
   });
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(null);
+
+  useEffect(() => {
+    fetchSupervisor();
+  }, []);
+
+  const fetchSupervisor = async () => {
+    try {
+      const response = await axios.get(apiUrl);
+      setSupervisors(response.data);
+    } catch (error) {
+      console.error("Error fetching user's data", error);
+    }
+  };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -57,12 +60,26 @@ function Supervisors() {
     setSupervisors(supervisors.filter((sup) => sup.id !== id));
   };
 
+  const resetLabel = () => {
+    setFormData({
+      id: "",
+      name: "",
+      emp_code: "",
+      email: "",
+      phone: "",
+      role: "supervisor",
+      password: "",
+      confirmPassword: "",
+    });
+    setIsEditing(false);
+  };
+
   return (
     <div className="p-5">
       <h1 className="text-2xl font-bold mb-4">🧑‍🏫 Supervisor Management</h1>
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-5 shadow-md rounded-lg mb-4"
+        className="border bg-gray-100 p-4 shadow-md rounded-lg mb-4"
       >
         {isEditing && (
           <div className="mb-2">
@@ -76,62 +93,112 @@ function Supervisors() {
             />
           </div>
         )}
-        <div className="mb-2">
-          <label className="block font-medium">Name</label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            className="w-full p-2 border rounded"
-            required
-          />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block font-medium">Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block font-medium">EmpCode</label>
+            <input
+              type="text"
+              name="empCode"
+              value={formData.empCode}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block font-medium">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block font-medium">Phone</label>
+            <input
+              type="text"
+              name="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block font-medium">Role</label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded"
+            >
+              <option value="supervisor">Supervisor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label className="block font-medium">Create Password</label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div className="w-full">
+            <label className="block font-medium">Re-enter Password</label>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div className="flex items-end justify-center ">
+            <div>
+              <button
+                type="submit"
+                className="bg-blue-500 text-white px-4 py-2 rounded shadow-md"
+              >
+                {isEditing ? "Update Supervisor" : "➕ Add Supervisor"}
+              </button>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={resetLabel}
+                  className="bg-gray-500 text-white px-4 py-2 rounded ml-2"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="mb-2">
-          <label className="block font-medium">Email</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            className="w-full p-2 border rounded"
-            required
-          />
-        </div>
-        <div className="mb-2">
-          <label className="block font-medium">Phone</label>
-          <input
-            type="text"
-            name="phone"
-            value={formData.phone}
-            onChange={handleInputChange}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block font-medium">Role</label>
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleInputChange}
-            className="w-full p-2 border rounded"
-          >
-            <option value="supervisor">Supervisor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded shadow-md"
-        >
-          {isEditing ? "Update Supervisor" : "Add Supervisor"}
-        </button>
       </form>
 
       <table className="w-full bg-white shadow-md rounded-lg">
         <thead>
           <tr className="bg-gray-200">
             <th className="p-3">Name</th>
+            <th className="p-3">EmpCode</th>
             <th className="p-3">Email</th>
             <th className="p-3">Phone</th>
             <th className="p-3">Role</th>
@@ -142,6 +209,7 @@ function Supervisors() {
           {supervisors.map((sup) => (
             <tr key={sup.id} className="border-b">
               <td className="p-3">{sup.name}</td>
+              <td className="p-3">{sup.email}</td>
               <td className="p-3">{sup.email}</td>
               <td className="p-3">{sup.phone}</td>
               <td className="p-3">{sup.role}</td>

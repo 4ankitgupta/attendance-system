@@ -1,48 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import API_BASE_URL from "../config";
 
-const sampleAttendance = [
-  {
-    id: 1,
-    emp_name: "John Doe",
-    supervisor_name: "Michael Scott",
-    ward_name: "Ward 5",
-    designation: "Supervisor",
-    date: "2025-02-19",
-    status: "present",
-    punch_in_time: "09:00 AM",
-    punch_out_time: "05:00 PM",
-    punch_in_image: "https://via.placeholder.com/50",
-    punch_out_image: "https://via.placeholder.com/50",
-    in_address: "123 Street, NY",
-    out_address: "456 Avenue, NY",
-  },
-  {
-    id: 2,
-    emp_name: "Jane Smith",
-    supervisor_name: "Dwight Schrute",
-    ward_name: "Ward 2",
-    designation: "Worker",
-    date: "2025-02-19",
-    status: "absent",
-    punch_in_time: "-",
-    punch_out_time: "-",
-    punch_in_image: "",
-    punch_out_image: "",
-    in_address: "-",
-    out_address: "-",
-  },
-];
+const apiUrl = `${API_BASE_URL}/api/attendance`;
 
 function AttendanceReports() {
-  const [records] = useState(sampleAttendance);
+  const [records, setRecords] = useState([]);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
 
+  useEffect(() => {
+    fetchRecords();
+  }, []);
+
+  const fetchRecords = async () => {
+    try {
+      const response = await axios.get(apiUrl);
+      setRecords(response.data);
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+    }
+  };
+
   // Filter records based on selected date
-  const filteredRecords = records.filter(
-    (record) => record.date === selectedDate
-  );
+  // const filteredRecords = records.filter(
+  //   (record) => record.date === selectedDate
+  // );
 
   return (
     <div className="p-5">
@@ -61,84 +45,84 @@ function AttendanceReports() {
       </div>
 
       {/* Attendance Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full bg-white shadow-md rounded-lg border border-gray-300">
-          <thead className="bg-gray-200 text-gray-700">
-            <tr>
-              <th className="p-3 border">Employee</th>
-              <th className="p-3 border">Supervisor</th>
-              <th className="p-3 border">Ward</th>
-              <th className="p-3 border">Designation</th>
-              <th className="p-3 border">Date</th>
-              <th className="p-3 border">Status</th>
-              <th className="p-3 border">Punch In</th>
-              <th className="p-3 border">Punch Out</th>
-              <th className="p-3 border">Punch In Image</th>
-              <th className="p-3 border">Punch Out Image</th>
-              <th className="p-3 border">In Address</th>
-              <th className="p-3 border">Out Address</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRecords.length > 0 ? (
-              filteredRecords.map((record) => (
-                <tr
-                  key={record.id}
-                  className="border-b hover:bg-gray-100 text-gray-800"
-                >
-                  <td className="p-3 border">{record.emp_name}</td>
-                  <td className="p-3 border">{record.supervisor_name}</td>
-                  <td className="p-3 border">{record.ward_name}</td>
-                  <td className="p-3 border">{record.designation}</td>
-                  <td className="p-3 border">{record.date}</td>
-                  <td
-                    className={`p-3 border font-semibold ${
-                      record.status === "present"
-                        ? "text-green-500"
-                        : record.status === "absent"
-                        ? "text-red-500"
-                        : "text-yellow-500"
-                    }`}
-                  >
-                    {record.status}
-                  </td>
-                  <td className="p-3 border">{record.punch_in_time || "-"}</td>
-                  <td className="p-3 border">{record.punch_out_time || "-"}</td>
-                  <td className="p-3 border text-center">
-                    {record.punch_in_image ? (
-                      <img
-                        src={record.punch_in_image}
-                        alt="Punch In"
-                        className="w-10 h-10 rounded mx-auto"
-                      />
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td className="p-3 border text-center">
-                    {record.punch_out_image ? (
-                      <img
-                        src={record.punch_out_image}
-                        alt="Punch Out"
-                        className="w-10 h-10 rounded mx-auto"
-                      />
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td className="p-3 border">{record.in_address || "-"}</td>
-                  <td className="p-3 border">{record.out_address || "-"}</td>
-                </tr>
-              ))
-            ) : (
+      <div className="overflow-x-auto max-w-full">
+        <div className="w-max">
+          <table className="bg-white shadow-md rounded-lg border border-gray-300">
+            <thead className="bg-gray-200 text-gray-700">
               <tr>
-                <td colSpan="12" className="p-3 text-center text-gray-500">
-                  No records found for the selected date.
-                </td>
+                <th className="p-3 border">Sr No.</th>
+                <th className="p-3 border">Name</th>
+                <th className="p-3 border">EmpCode</th>
+                <th className="p-3 border">Date</th>
+                <th className="p-3 border">Ward</th>
+                <th className="p-3 border">Zone</th>
+                <th className="p-3 border">City</th>
+                <th className="p-3 border">Contact No.</th>
+                <th className="p-3 border">Punch In</th>
+                <th className="p-3 border">In Address</th>
+                <th className="p-3 border">Punch In Image</th>
+                <th className="p-3 border">Punch Out</th>
+                <th className="p-3 border">Out Address</th>
+                <th className="p-3 border">Punch Out Image</th>
+                <th className="p-3 border">Duration</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {/* filteredRecords.length > 0 ? (
+                records.map((record) */}
+              {records.length > 0 ? (
+                records.map((record) => (
+                  <tr
+                    key={record.sr_no}
+                    className="border-b hover:bg-gray-100 text-gray-800"
+                  >
+                    <td className="p-3 border">{record.sr_no}</td>
+                    <td className="p-3 border">{record.name}</td>
+                    <td className="p-3 border">{record.emp_code}</td>
+                    <td className="p-3 border">{record.date}</td>
+                    <td className="p-3 border">{record.ward}</td>
+                    <td className="p-3 border">{record.zone}</td>
+                    <td className="p-3 border">{record.city}</td>
+                    <td className="p-3 border">{record.contact_no}</td>
+                    <td className="p-3 border">{record.punch_in || "-"}</td>
+                    <td className="p-3 border">{record.in_address || "-"}</td>
+                    <td className="p-3 border text-center">
+                      {record.punch_in_image ? (
+                        <img
+                          src={record.punch_in_image}
+                          alt="Punch In"
+                          className="w-10 h-10 rounded mx-auto"
+                        />
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                    <td className="p-3 border">{record.punch_out || "-"}</td>
+                    <td className="p-3 border">{record.out_address || "-"}</td>
+                    <td className="p-3 border text-center">
+                      {record.punch_out_image ? (
+                        <img
+                          src={record.punch_out_image}
+                          alt="Punch Out"
+                          className="w-10 h-10 rounded mx-auto"
+                        />
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                    <td className="p-3 border">{record.duration}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="15" className="p-3 text-center text-gray-500">
+                    No records found for the selected date.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

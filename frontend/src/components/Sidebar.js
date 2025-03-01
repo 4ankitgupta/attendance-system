@@ -12,23 +12,13 @@ function Sidebar() {
       <h2 className="text-xl font-bold mb-4">Admin Panel</h2>
       <ul>
         <li className="mb-3">
-          <Link to="/master" className="hover:text-gray-300">
-            📊 Master
-          </Link>
-        </li>
-        <li className="mb-3">
           <Link to="/" className="hover:text-gray-300">
             📊 Dashboard
           </Link>
         </li>
         <li className="mb-3">
-          <Link to="/employees" className="hover:text-gray-300">
-            👨‍💼 Employees
-          </Link>
-        </li>
-        <li className="mb-3">
-          <Link to="/attendance" className="hover:text-gray-300">
-            📅 Attendance Reports
+          <Link to="/master" className="hover:text-gray-300">
+            📊 Master
           </Link>
         </li>
         <li className="mb-3">
@@ -39,6 +29,16 @@ function Sidebar() {
         <li className="mb-3">
           <Link to="/assignSupervisorWard" className="hover:text-gray-300">
             🧑‍🏫 Assign Supervisor Ward
+          </Link>
+        </li>
+        <li className="mb-3">
+          <Link to="/employees" className="hover:text-gray-300">
+            👨‍💼 Employees
+          </Link>
+        </li>
+        <li className="mb-3">
+          <Link to="/attendance" className="hover:text-gray-300">
+            📅 Attendance Reports
           </Link>
         </li>
         <li className="mb-3">

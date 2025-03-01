@@ -107,11 +107,11 @@ function Employees() {
       ...emp,
       city: cities.find((c) => c.city_name === emp.city)?.city_id || "",
       zone: zones.find((z) => z.zone_name === emp.zone)?.zone_id || "",
-      ward: wards.find((w) => w.ward_name === emp.ward)?.ward_id || "",
+      ward_id: wards.find((w) => w.ward_name === emp.ward)?.ward_id || "",
       department:
         departments.find((de) => de.department_name === emp.department)
           ?.department_id || "",
-      designation:
+      designation_id:
         designations.find((d) => d.designation_name === emp.designation)
           ?.designation_id || "",
     });
@@ -123,7 +123,7 @@ function Employees() {
       <h1 className="text-2xl font-bold mb-4">👨‍💼 Employee Management</h1>
 
       {/* Employee Form */}
-      <div className="border p-4 mb-4 bg-gray-100 rounded">
+      <div className="border p-4 mb-4 bg-gray-100 shadow-md rounded">
         <label className="block mb-2">Employee ID (Auto-generated)</label>
         <input
           type="text"
@@ -225,7 +225,7 @@ function Employees() {
           <div>
             <label className="block">Ward</label>
             <select
-              value={newEmployee.ward}
+              value={newEmployee.ward_id}
               onChange={(e) =>
                 setNewEmployee({
                   ...newEmployee,
@@ -278,7 +278,7 @@ function Employees() {
           <div>
             <label className="block">Designation</label>
             <select
-              value={newEmployee.designation}
+              value={newEmployee.designation_id}
               onChange={(e) =>
                 setNewEmployee({
                   ...newEmployee,
