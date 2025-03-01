@@ -31,12 +31,16 @@ function App() {
 
 function MainContent() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const { user } = useAuth(); // Ensure useAuth() is used inside AuthProvider
+  const { user } = useAuth();
 
   return (
     <div className="flex">
-      {user && <Sidebar />}
-      <div className={`flex-1 ${user ? "ml-64" : ""} overflow-x-auto`}>
+      {user && <Sidebar isOpen={isSidebarOpen} />}
+      <div
+        className={`flex-1 ${
+          user && isSidebarOpen ? "ml-64" : "ml-0"
+        } transition-all duration-300`}
+      >
         {user && (
           <Navbar toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
         )}
@@ -78,7 +82,6 @@ function MainContent() {
   );
 }
 
-// ✅ Redirect Logged-in Users Away from Login Page
 const RedirectIfAuthenticated = () => {
   const { user } = useAuth();
   return user ? <Navigate to="/" replace /> : <Login />;

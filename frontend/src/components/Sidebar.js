@@ -1,14 +1,16 @@
 import { Link } from "react-router-dom";
-import logo from "../assets/logo.png"; // Adjust the path as needed
+import logo from "../assets/logo.png";
 
-function Sidebar() {
+function Sidebar({ isOpen }) {
   return (
-    <div className="w-64 h-screen bg-gray-800 text-white p-5 fixed left-0 top-0">
-      {/* Company Logo */}
+    <div
+      className={`w-64 h-screen bg-gray-800 text-white p-5 fixed top-0 transition-transform duration-300 ${
+        isOpen ? "left-0" : "-left-64"
+      }`}
+    >
       <div className="flex justify-center mb-4">
         <img src={logo} alt="Company Logo" className="w-32 h-auto" />
       </div>
-
       <h2 className="text-xl font-bold mb-4">Admin Panel</h2>
       <ul>
         <li className="mb-3">
