@@ -20,54 +20,61 @@ import { useAuth } from "./AuthContext";
 import { AuthProvider } from "./AuthContext";
 
 function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <MainContent />
+      </Router>
+    </AuthProvider>
+  );
+}
+
+function MainContent() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const { user } = useAuth(); // Ensure useAuth() is used inside AuthProvider
 
   return (
-    <Router>
-      <AuthProvider>
-        <div className="flex">
-          <Sidebar />
-          <div className="flex-1 ml-64 overflow-x-auto">
-            <Navbar toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
-            <div className="p-5">
-              <Routes>
-                <Route path="/login" element={<RedirectIfAuthenticated />} />
-                <Route
-                  path="/"
-                  element={<ProtectedRoute element={<Dashboard />} />}
-                />
-                <Route
-                  path="/master"
-                  element={<ProtectedRoute element={<Master />} />}
-                />
-                <Route
-                  path="/employees"
-                  element={<ProtectedRoute element={<Employees />} />}
-                />
-                <Route
-                  path="/attendance"
-                  element={<ProtectedRoute element={<AttendanceReports />} />}
-                />
-                <Route
-                  path="/supervisors"
-                  element={<ProtectedRoute element={<Supervisors />} />}
-                />
-                <Route
-                  path="/assignSupervisorWard"
-                  element={
-                    <ProtectedRoute element={<AssignSupervisorWard />} />
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={<ProtectedRoute element={<Settings />} />}
-                />
-              </Routes>
-            </div>
-          </div>
+    <div className="flex">
+      {user && <Sidebar />}
+      <div className={`flex-1 ${user ? "ml-64" : ""} overflow-x-auto`}>
+        {user && (
+          <Navbar toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
+        )}
+        <div className="p-5">
+          <Routes>
+            <Route path="/login" element={<RedirectIfAuthenticated />} />
+            <Route
+              path="/"
+              element={<ProtectedRoute element={<Dashboard />} />}
+            />
+            <Route
+              path="/master"
+              element={<ProtectedRoute element={<Master />} />}
+            />
+            <Route
+              path="/employees"
+              element={<ProtectedRoute element={<Employees />} />}
+            />
+            <Route
+              path="/attendance"
+              element={<ProtectedRoute element={<AttendanceReports />} />}
+            />
+            <Route
+              path="/supervisors"
+              element={<ProtectedRoute element={<Supervisors />} />}
+            />
+            <Route
+              path="/assignSupervisorWard"
+              element={<ProtectedRoute element={<AssignSupervisorWard />} />}
+            />
+            <Route
+              path="/settings"
+              element={<ProtectedRoute element={<Settings />} />}
+            />
+          </Routes>
         </div>
-      </AuthProvider>
-    </Router>
+      </div>
+    </div>
   );
 }
 

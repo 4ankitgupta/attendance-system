@@ -2,8 +2,7 @@ import { FaBars, FaSearch, FaBell, FaExpand } from "react-icons/fa";
 import { useAuth } from "../AuthContext"; // Import useAuth hook
 
 function Navbar({ toggleSidebar }) {
-  const { logout } = useAuth(); // Get logout function
-
+  const { user, logout } = useAuth();
   return (
     <nav className="bg-white shadow-md p-4 flex justify-between items-center">
       {/* Left Section: Sidebar Toggle & Search */}
@@ -25,6 +24,8 @@ function Navbar({ toggleSidebar }) {
 
       {/* Right Section: Fullscreen, Notifications, User Avatar, Logout */}
       <div className="flex items-center space-x-4">
+        <h1>Welcome back {user?.name},</h1>
+        <h1>Role: {user?.role}</h1>
         <button className="text-gray-700 text-xl">
           <FaExpand />
         </button>

@@ -26,11 +26,7 @@ export const AuthProvider = ({ children }) => {
 
         if (res.ok) {
           const userData = await res.json();
-
           setUser(userData); // Store user info
-          setTimeout(() => {
-            console.log("Updated User:", user);
-          }, 1000); // Wait for state update
         }
       } catch (error) {
         console.error("Error fetching user:", error);
@@ -57,13 +53,8 @@ export const AuthProvider = ({ children }) => {
       }
 
       const data = await res.json();
-
-      localStorage.setItem("token", data.token); // Store token
-      setUser(data.user); // Only set the user data
-
-      setTimeout(() => {
-        console.log("Updated User:", user);
-      }, 1000); // Wait for state update
+      localStorage.setItem("token", data.token);
+      setUser(data.user);
 
       return true;
     } catch (error) {
