@@ -6,6 +6,7 @@ const apiUrl = `${API_BASE_URL}/api/zones`;
 
 function CreateZone() {
   const [zones, setZones] = useState([]);
+  const [filteredZones, setFilteredZones] = useState([]); // For filtered zones
   const [zoneName, setZoneName] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [cities, setCities] = useState([]);
@@ -20,18 +21,29 @@ function CreateZone() {
   const fetchCities = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/cities`);
-      setCities(response.data);
+      if (response.data) {
+        setCities(response.data);
+      } else {
+        setErrorMessage("⚠️ No cities found. Please add a city first.");
+      }
     } catch (error) {
       console.error("Error fetching cities:", error);
+      setErrorMessage("⚠️ Failed to fetch cities. Please try again later.");
     }
   };
 
   const fetchZones = async () => {
     try {
       const response = await axios.get(apiUrl);
-      setZones(response.data);
+      if (response.data) {
+        setZones(response.data);
+        setFilteredZones(response.data); // Initialize filteredZones with all zones
+      } else {
+        setErrorMessage("⚠️ No zones found.");
+      }
     } catch (error) {
       console.error("Error fetching zones:", error);
+      setErrorMessage("⚠️ Failed to fetch zones. Please try again later.");
     }
   };
 
@@ -39,36 +51,51 @@ function CreateZone() {
     e.preventDefault();
     setErrorMessage(""); // Clear previous errors
 
+    if (!selectedCity || !zoneName) {
+      setErrorMessage("⚠️ Please select a city and enter a zone name.");
+      return;
+    }
+
     try {
       if (editingZone) {
         // Update existing zone
-        await axios.put(`${apiUrl}/${editingZone.zone_id}`, {
+        const response = await axios.put(`${apiUrl}/${editingZone.zone_id}`, {
           city_id: selectedCity,
           zone_name: zoneName,
         });
-        setZones((prevZones) =>
-          prevZones.map((zone) =>
-            zone.zone_id === editingZone.zone_id
-              ? { ...zone, zone_name: zoneName, city_id: selectedCity }
-              : zone
-          )
-        );
+        if (response.data) {
+          setZones((prevZones) =>
+            prevZones.map((zone) =>
+              zone.zone_id === editingZone.zone_id
+                ? { ...zone, zone_name: zoneName, city_id: selectedCity }
+                : zone
+            )
+          );
+          setErrorMessage(""); // Clear errors on success
+        } else {
+          setErrorMessage("⚠️ Failed to update zone. Please try again.");
+        }
       } else {
         // Add new zone
         const response = await axios.post(apiUrl, {
           city_id: selectedCity,
           zone_name: zoneName,
         });
-        setZones([...zones, response.data]);
+        if (response.data) {
+          setZones([...zones, response.data]);
+          setErrorMessage(""); // Clear errors on success
+        } else {
+          setErrorMessage("⚠️ Failed to add zone. Please try again.");
+        }
       }
 
       // Reset form
       resetForm();
       fetchZones(); // Refresh zone list
     } catch (error) {
+      console.error("Error saving zone:", error);
       if (error.response) {
         const errCode = error.response.data.code;
-
         if (errCode === "23505") {
           setErrorMessage("⚠️ Zone already exists for this city.");
         } else {
@@ -77,16 +104,22 @@ function CreateZone() {
       } else {
         setErrorMessage("⚠️ Network error. Please check your connection.");
       }
-      console.error("Error saving zone:", error);
     }
   };
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${apiUrl}/${id}`);
-      setZones(zones.filter((zone) => zone.zone_id !== id));
+      const response = await axios.delete(`${apiUrl}/${id}`);
+      if (response.data) {
+        setZones(zones.filter((zone) => zone.zone_id !== id));
+        setFilteredZones(filteredZones.filter((zone) => zone.zone_id !== id));
+        setErrorMessage(""); // Clear errors on success
+      } else {
+        setErrorMessage("⚠️ Failed to delete zone. Please try again.");
+      }
     } catch (error) {
       console.error("Error deleting zone:", error);
+      setErrorMessage("⚠️ Failed to delete zone. Please try again.");
     }
   };
 
@@ -100,6 +133,25 @@ function CreateZone() {
     setZoneName("");
     setSelectedCity("");
     setEditingZone(null);
+  };
+
+  // Filter zones based on selected city
+  useEffect(() => {
+    if (selectedCity) {
+      const filtered = zones.filter(
+        (zone) => zone.city_id === parseInt(selectedCity)
+      );
+      setFilteredZones(filtered);
+    } else {
+      setFilteredZones(zones); // Show all zones if no city is selected
+    }
+  }, [selectedCity, zones]);
+
+  // Reset filters and form
+  const handleResetAll = () => {
+    resetForm(); // Reset form data
+    setSelectedCity(""); // Reset city filter
+    setFilteredZones(zones); // Show all zones
   };
 
   return (
@@ -149,13 +201,13 @@ function CreateZone() {
           >
             {editingZone ? "Update Zone" : "Add Zone"}
           </button>
-          {editingZone && (
+          {(editingZone || selectedCity) && (
             <button
               type="button"
-              onClick={resetForm}
+              onClick={handleResetAll}
               className="bg-gray-500 text-white px-4 py-2 rounded"
             >
-              Reset
+              Reset All
             </button>
           )}
         </div>
@@ -171,7 +223,7 @@ function CreateZone() {
           </tr>
         </thead>
         <tbody>
-          {zones.map((zone) => (
+          {filteredZones.map((zone) => (
             <tr key={zone.zone_id} className="border-b text-center">
               <td className="p-3">{zone.city_name}</td>
               <td className="p-3">{zone.zone_name}</td>

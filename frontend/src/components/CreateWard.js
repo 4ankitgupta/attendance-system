@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 
@@ -6,6 +6,7 @@ const apiUrl = `${API_BASE_URL}/api/wards`;
 
 function CreateWard() {
   const [wards, setWards] = useState([]);
+  const [filteredWards, setFilteredWards] = useState([]); // For filtered wards
   const [wardName, setWardName] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [cities, setCities] = useState([]);
@@ -14,18 +15,12 @@ function CreateWard() {
   const [editingWard, setEditingWard] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    fetchZones();
-    fetchWards();
-    fetchCities();
-  }, []);
-
   const fetchCities = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/cities`);
       setCities(response.data);
     } catch (error) {
-      console.error("Error fetching zones:", error);
+      console.error("Error fetching cities:", error);
     }
   };
 
@@ -38,13 +33,36 @@ function CreateWard() {
     }
   };
 
-  const fetchWards = async () => {
+  const fetchWards = useCallback(async () => {
     try {
       const response = await axios.get(apiUrl);
-      setWards(response.data);
+      const formattedWards = formatWards(response.data);
+      setWards(formattedWards);
+      setFilteredWards(formattedWards); // Initialize filteredWards with all wards
     } catch (error) {
       console.error("Error fetching wards:", error);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchZones();
+    fetchWards();
+    fetchCities();
+  }, [fetchWards]);
+
+  const formatWards = (data) => {
+    return data.flatMap((city) =>
+      city.zones.flatMap((zone) =>
+        zone.wards.map((ward) => ({
+          ward_id: ward.wardId,
+          ward_name: ward.wardName,
+          zone_id: zone.zoneId,
+          zone_name: zone.zone,
+          city_id: city.cityId,
+          city_name: city.city,
+        }))
+      )
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -92,6 +110,7 @@ function CreateWard() {
     try {
       await axios.delete(`${apiUrl}/${id}`);
       setWards(wards.filter((ward) => ward.ward_id !== id));
+      setFilteredWards(filteredWards.filter((ward) => ward.ward_id !== id));
     } catch (error) {
       console.error("Error deleting ward:", error);
     }
@@ -107,10 +126,41 @@ function CreateWard() {
       setSelectedCity(zone.city_id.toString());
     }
   };
+
   const resetForm = () => {
     setWardName("");
     setSelectedZone("");
     setEditingWard(null);
+  };
+  const handleResetAll = () => {
+    resetForm(); // Reset form data
+    handleResetFilters(); // Reset filters
+  };
+
+  // Filter wards based on selected city and zone
+  useEffect(() => {
+    let filtered = wards;
+
+    if (selectedCity) {
+      filtered = filtered.filter(
+        (ward) => ward.city_id === parseInt(selectedCity)
+      );
+    }
+
+    if (selectedZone) {
+      filtered = filtered.filter(
+        (ward) => ward.zone_id === parseInt(selectedZone)
+      );
+    }
+
+    setFilteredWards(filtered);
+  }, [selectedCity, selectedZone, wards]);
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setSelectedCity("");
+    setSelectedZone("");
+    setFilteredWards(wards); // Show all wards
   };
 
   return (
@@ -176,15 +226,39 @@ function CreateWard() {
           >
             {editingWard ? "Update Ward" : "Add Ward"}
           </button>
+
+          {/* Reset Filters Button */}
+          {/* <button
+            onClick={handleResetFilters}
+            disabled={!selectedCity && !selectedZone} // Disable if no filters are applied
+            className={`px-4 py-2 rounded ${
+              selectedCity || selectedZone
+                ? "bg-red-500 text-white"
+                : "bg-gray-400 text-gray-700 cursor-not-allowed"
+            }`}
+          >
+            Reset Filters
+          </button>
           {editingWard && (
             <button
               type="button"
               onClick={resetForm}
               className="bg-gray-500 text-white px-4 py-2 rounded"
             >
-              Reset
+              Reset Form Data
             </button>
-          )}
+          )} */}
+          <button
+            onClick={handleResetAll}
+            disabled={!selectedCity && !selectedZone && !editingWard} // Disable if no filters or editing
+            className={`px-4 py-2 rounded ${
+              selectedCity || selectedZone || editingWard
+                ? "bg-red-500 text-white"
+                : "bg-gray-400 text-gray-700 cursor-not-allowed"
+            }`}
+          >
+            Reset
+          </button>
         </div>
       </form>
 
@@ -198,7 +272,7 @@ function CreateWard() {
           </tr>
         </thead>
         <tbody>
-          {wards.map((ward) => (
+          {filteredWards.map((ward) => (
             <tr key={ward.ward_id} className="border-b text-center">
               <td className="p-3">{ward.city_name || "N/A"}</td>
               <td className="p-3">{ward.zone_name || "Unknown Zone"}</td>

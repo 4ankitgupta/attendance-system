@@ -3,18 +3,69 @@ const router = express.Router();
 const pool = require("../config/db");
 
 // Get all wards with zone names
+// router.get("/", async (req, res) => {
+//   try {
+//     const result = await pool.query(
+//       `SELECT w.ward_id, w.ward_name, z.zone_id,
+//     z.zone_name,
+//     c.city_id,
+//     c.city_name
+// FROM wards w
+// JOIN zones z ON w.zone_id = z.zone_id
+// JOIN cities c ON z.city_id = c.city_id;`
+//     );
+//     res.json(result.rows);
+//   } catch (error) {
+//     console.error("Error fetching wards:", error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT w.ward_id, w.ward_name, z.zone_id, 
-    z.zone_name, 
-    c.city_id, 
-    c.city_name
-FROM wards w
-JOIN zones z ON w.zone_id = z.zone_id
-JOIN cities c ON z.city_id = c.city_id;`
+              z.zone_name, c.city_id, c.city_name
+       FROM wards w
+       JOIN zones z ON w.zone_id = z.zone_id
+       JOIN cities c ON z.city_id = c.city_id;`
     );
-    res.json(result.rows);
+
+    const groupedData = {};
+
+    result.rows.forEach((row) => {
+      const { city_id, city_name, zone_id, zone_name, ward_id, ward_name } =
+        row;
+
+      if (!groupedData[city_id]) {
+        groupedData[city_id] = {
+          cityId: city_id,
+          city: city_name,
+          zones: {},
+        };
+      }
+
+      if (!groupedData[city_id].zones[zone_id]) {
+        groupedData[city_id].zones[zone_id] = {
+          zoneId: zone_id,
+          zone: zone_name,
+          wards: [],
+        };
+      }
+
+      groupedData[city_id].zones[zone_id].wards.push({
+        wardId: ward_id,
+        wardName: ward_name,
+      });
+    });
+
+    // Convert grouped data into an array format
+    const responseData = Object.values(groupedData).map((city) => ({
+      ...city,
+      zones: Object.values(city.zones),
+    }));
+
+    res.json(responseData);
   } catch (error) {
     console.error("Error fetching wards:", error);
     res.status(500).json({ error: "Internal Server Error" });

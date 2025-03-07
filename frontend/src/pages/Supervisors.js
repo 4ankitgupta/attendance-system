@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import API_BASE_URL from "../config";
+// import API_BASE_URL from "../config";
 
-const apiUrl = `${API_BASE_URL}/api/supervisor`;
+// const apiUrl = `${API_BASE_URL}/api/supervisor`;
 
 function Supervisors() {
   const [supervisors, setSupervisors] = useState([]);
   const [formData, setFormData] = useState({
-    id: "",
+    user_id: "",
     name: "",
     emp_code: "",
     email: "",
@@ -17,6 +17,7 @@ function Supervisors() {
     confirmPassword: "",
   });
   const [isEditing, setIsEditing] = useState(null);
+  const [changePassword, setChangePassword] = useState(null);
 
   useEffect(() => {
     fetchSupervisor();
@@ -24,45 +25,102 @@ function Supervisors() {
 
   const fetchSupervisor = async () => {
     try {
-      const response = await axios.get(apiUrl);
+      const response = await axios.get("http://localhost:5000/api/supervisor");
       setSupervisors(response.data);
     } catch (error) {
       console.error("Error fetching user's data", error);
+      alert("Failed to fetch supervisors. Please try again.");
     }
   };
-
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEditing) {
-      setSupervisors(
-        supervisors.map((sup) => (sup.id === formData.id ? formData : sup))
-      );
-    } else {
-      setSupervisors([
-        ...supervisors,
-        { ...formData, id: supervisors.length + 1 },
-      ]);
+
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match!");
+      return;
     }
-    setFormData({ id: "", name: "", email: "", phone: "", role: "supervisor" });
-    setIsEditing(false);
+
+    try {
+      if (isEditing && !changePassword) {
+        // Update supervisor
+        await axios.put(
+          "http://localhost:5000/api/auth/update",
+          {
+            passChange: false,
+            user_id: formData.user_id,
+            name: formData.name,
+            emp_code: formData.emp_code,
+            email: formData.email,
+            phone: formData.phone,
+            role: formData.role,
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
+      } else if (isEditing && changePassword) {
+        // Update supervisor with password
+        await axios.put("http://localhost:5000/api/auth/update", {
+          passChange: true,
+          user_id: formData.user_id,
+          name: formData.name,
+          emp_code: formData.emp_code,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          password: formData.password,
+        });
+      } else {
+        // Add new supervisor (Only Admins should add)
+        await axios.post(
+          "http://localhost:5000/api/auth/register",
+          {
+            name: formData.name,
+            emp_code: formData.emp_code,
+            email: formData.email,
+            phone: formData.phone,
+            role: formData.role,
+            password: formData.password,
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
+      }
+      fetchSupervisor(); // Refresh list
+      resetLabel(); // Resets the labels
+    } catch (error) {
+      console.error("Error updating supervisor", error);
+    }
   };
 
   const handleEdit = (sup) => {
-    setFormData(sup);
+    setFormData({
+      user_id: sup.user_id || "",
+      name: sup.name || "",
+      emp_code: sup.emp_code || "",
+      email: sup.email || "",
+      phone: sup.phone || "",
+      role: sup.role || "supervisor",
+      password: "",
+      confirmPassword: "",
+    });
     setIsEditing(true);
   };
 
-  const handleDelete = (id) => {
-    setSupervisors(supervisors.filter((sup) => sup.id !== id));
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/supervisor/${id}`);
+      setSupervisors(supervisors.filter((sup) => sup.user_id !== id));
+      fetchSupervisor();
+    } catch (error) {
+      console.error("Error deleting supervisor", error);
+    }
   };
 
   const resetLabel = () => {
     setFormData({
-      id: "",
+      user_id: "",
       name: "",
       emp_code: "",
       email: "",
@@ -72,6 +130,7 @@ function Supervisors() {
       confirmPassword: "",
     });
     setIsEditing(false);
+    setChangePassword(false);
   };
 
   return (
@@ -87,7 +146,7 @@ function Supervisors() {
             <input
               type="text"
               name="id"
-              value={formData.id}
+              value={formData.user_id}
               disabled
               className="w-full p-2 border rounded bg-gray-100"
             />
@@ -110,8 +169,8 @@ function Supervisors() {
             <label className="block font-medium">EmpCode</label>
             <input
               type="text"
-              name="empCode"
-              value={formData.empCode}
+              name="emp_code"
+              value={formData.emp_code}
               onChange={handleInputChange}
               className="w-full p-2 border rounded"
               required
@@ -150,28 +209,32 @@ function Supervisors() {
               <option value="admin">Admin</option>
             </select>
           </div>
-          <div>
-            <label className="block font-medium">Create Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          <div className="w-full">
-            <label className="block font-medium">Re-enter Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
+          {(!isEditing || changePassword) && (
+            <div>
+              <label className="block font-medium">Create Password</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded"
+                required
+              />
+            </div>
+          )}
+          {(!isEditing || changePassword) && (
+            <div className="w-full">
+              <label className="block font-medium">Re-enter Password</label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded"
+                required
+              />
+            </div>
+          )}
           <div className="flex items-end justify-center ">
             <div>
               <button
@@ -189,6 +252,15 @@ function Supervisors() {
                   Reset
                 </button>
               )}
+              {/* {isEditing && (
+                <button
+                  type="button"
+                  // onClick={resetLabel}
+                  className="bg-gray-500 text-white px-4 py-2 rounded ml-2"
+                >
+                  Change Password
+                </button>
+              )} */}
             </div>
           </div>
         </div>
@@ -207,9 +279,9 @@ function Supervisors() {
         </thead>
         <tbody>
           {supervisors.map((sup) => (
-            <tr key={sup.id} className="border-b">
+            <tr key={sup.user_id} className="border-b">
               <td className="p-3">{sup.name}</td>
-              <td className="p-3">{sup.email}</td>
+              <td className="p-3">{sup.emp_code}</td>
               <td className="p-3">{sup.email}</td>
               <td className="p-3">{sup.phone}</td>
               <td className="p-3">{sup.role}</td>
@@ -221,7 +293,7 @@ function Supervisors() {
                   ✏️ Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(sup.id)}
+                  onClick={() => handleDelete(sup.user_id)}
                   className="bg-red-500 text-white px-2 py-1 rounded"
                 >
                   🗑️ Delete

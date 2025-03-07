@@ -1,61 +1,58 @@
-const bcrypt = require("bcryptjs"); // Import bcrypt for password hashing
 const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
+const authenticate = require("../middleware/authenticate"); // Ensure users are logged in
 
-// ✅ Create a new user
-router.post("/", async (req, res) => {
-  const { name, emp_code, email, phone, role, password, confirmPassword } =
-    req.body;
-
-  // ✅ Validate required fields
-  if (
-    !name ||
-    !emp_code ||
-    !email ||
-    !phone ||
-    !role ||
-    !password ||
-    !confirmPassword
-  ) {
-    return res.status(400).json({ error: "All fields are required" });
-  }
-
-  // ✅ Check if passwords match
-  if (password !== confirmPassword) {
-    return res.status(400).json({ error: "Passwords do not match" });
-  }
-
+// ✅ Fetch all supervisors (Only Admins can fetch)
+router.get("/", async (req, res) => {
   try {
-    // ✅ Check if user with the same emp_code or email already exists
-    const existingUser = await pool.query(
-      "SELECT user_id FROM users WHERE emp_code = $1 OR email = $2",
-      [emp_code, email]
+    const supervisors = await pool.query(
+      "SELECT user_id, name, emp_code, email, phone, role FROM users WHERE role = 'supervisor'"
     );
-
-    if (existingUser.rowCount > 0) {
-      return res
-        .status(400)
-        .json({ error: "Employee code or email already exists" });
-    }
-
-    // ✅ Hash password before storing
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // ✅ Insert new user
-    const result = await pool.query(
-      "INSERT INTO users (name, emp_code, email, phone, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, name, emp_code, email, phone, role",
-      [name, emp_code, email, phone, role, hashedPassword]
-    );
-
-    res
-      .status(201)
-      .json({ message: "User created successfully", user: result.rows[0] });
+    res.json(supervisors.rows);
   } catch (error) {
-    console.error("Error adding user:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
+// ✅ Update Supervisor (Name, Phone, Email Only)
+router.put("/:id", authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { name, emp_code, email, phone, role, password, passChange } = req.body;
+
+  try {
+    if (passChange) {
+      await pool.query(
+        "UPDATE users SET name=$1, emp_code=$2, email=$3, phone=$4, role=$5, password=crypt($6, gen_salt('bf')) WHERE user_id=$7",
+        [name, emp_code, email, phone, role, password, id]
+      );
+    } else {
+      await pool.query(
+        "UPDATE users SET name=$1, emp_code=$2, email=$3, phone=$4, role=$5 WHERE user_id=$6",
+        [name, emp_code, email, phone, role, id]
+      );
+    }
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Supervisor not found" });
+    }
+    res.json({
+      message: "Supervisor updated successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Update failed" });
+  }
+});
+
+// ✅ Delete Supervisor
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM users WHERE user_id = $1", [id]);
+    res.json({ message: "Supervisor deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
 module.exports = router;

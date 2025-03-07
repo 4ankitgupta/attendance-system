@@ -11,7 +11,7 @@ function Employees() {
   const [designations, setDesignations] = useState([]);
   const [cities, setCities] = useState([]);
   const [zones, setZones] = useState([]);
-  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [isEditing, setIsEditing] = useState(null);
   const [newEmployee, setNewEmployee] = useState({
     emp_id: "",
     name: "",
@@ -50,9 +50,23 @@ function Employees() {
           axios.get(`${API_BASE_URL}/api/departments`),
           axios.get(`${API_BASE_URL}/api/designations`),
         ]);
+
       setCities(citiesRes.data);
       setZones(zonesRes.data);
-      setWards(wardsRes.data);
+
+      // Format wards data to match the new nested structure
+      const formattedWards = wardsRes.data.flatMap((city) =>
+        city.zones.flatMap((zone) =>
+          zone.wards.map((ward) => ({
+            ward_id: ward.wardId,
+            ward_name: ward.wardName,
+            zone_id: zone.zoneId,
+            city_id: city.cityId,
+          }))
+        )
+      );
+      setWards(formattedWards);
+
       setDepartments(departmentsRes.data);
       setDesignations(designationsRes.data);
     } catch (error) {
@@ -74,14 +88,14 @@ function Employees() {
       department: "",
       designation: "",
     });
-    setEditingEmployee(null);
+    setIsEditing(null);
   };
 
   const addOrUpdateEmployee = async () => {
     if (!newEmployee.name.trim() || !newEmployee.emp_code.trim()) return;
 
     try {
-      if (editingEmployee) {
+      if (isEditing) {
         await axios.put(`${apiUrl}/${newEmployee.emp_id}`, newEmployee);
       } else {
         await axios.post(apiUrl, newEmployee);
@@ -115,7 +129,7 @@ function Employees() {
         designations.find((d) => d.designation_name === emp.designation)
           ?.designation_id || "",
     });
-    setEditingEmployee(emp.emp_id);
+    setIsEditing(emp.emp_id);
   };
 
   return (
@@ -124,13 +138,17 @@ function Employees() {
 
       {/* Employee Form */}
       <div className="border p-4 mb-4 bg-gray-100 shadow-md rounded">
-        <label className="block mb-2">Employee ID (Auto-generated)</label>
-        <input
-          type="text"
-          value={newEmployee.emp_id}
-          disabled
-          className="border p-2 w-full rounded bg-gray-200"
-        />
+        {isEditing && (
+          <div>
+            <label className="block mb-2">Employee ID (Auto-generated)</label>
+            <input
+              type="text"
+              value={newEmployee.emp_id}
+              disabled
+              className="border p-2 w-full rounded bg-gray-200"
+            />
+          </div>
+        )}
 
         {/* Two fields per row */}
         <div className="grid grid-cols-2 gap-4 mt-2">
@@ -179,7 +197,7 @@ function Employees() {
                   ...newEmployee,
                   city: e.target.value,
                   zone: "",
-                  ward: "",
+                  ward_id: "",
                 })
               }
               className="p-2 border rounded w-full"
@@ -203,7 +221,7 @@ function Employees() {
                 setNewEmployee({
                   ...newEmployee,
                   zone: e.target.value,
-                  ward: "",
+                  ward_id: "",
                 })
               }
               className="p-2 border rounded w-full"
@@ -229,7 +247,7 @@ function Employees() {
               onChange={(e) =>
                 setNewEmployee({
                   ...newEmployee,
-                  ward_id: Number(e.target.value),
+                  ward_id: e.target.value,
                 })
               }
               className="p-2 border rounded w-full"
@@ -256,7 +274,7 @@ function Employees() {
                 setNewEmployee({
                   ...newEmployee,
                   department: e.target.value,
-                  designation: "",
+                  designation_id: "",
                 })
               }
               className="p-2 border rounded w-full"
@@ -282,7 +300,7 @@ function Employees() {
               onChange={(e) =>
                 setNewEmployee({
                   ...newEmployee,
-                  designation_id: Number(e.target.value),
+                  designation_id: e.target.value,
                 })
               }
               className="p-2 border rounded w-full"
@@ -313,9 +331,9 @@ function Employees() {
           onClick={addOrUpdateEmployee}
           className="bg-blue-500 text-white px-4 py-2 rounded shadow-md mt-4 mr-4"
         >
-          {editingEmployee ? "Update Employee" : "➕ Add Employee"}
+          {isEditing ? "Update Employee" : "➕ Add Employee"}
         </button>
-        {editingEmployee && (
+        {isEditing && (
           <button
             type="button"
             onClick={resetLabel}

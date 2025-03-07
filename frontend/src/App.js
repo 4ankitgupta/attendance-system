@@ -47,6 +47,7 @@ function MainContent() {
         <div className="p-5">
           <Routes>
             <Route path="/login" element={<RedirectIfAuthenticated />} />
+
             <Route
               path="/"
               element={<ProtectedRoute element={<Dashboard />} />}
