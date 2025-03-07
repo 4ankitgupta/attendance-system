@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import axios from "axios";
+// import axios from "axios";
+import API_BASE_URL from "./config";
+
+const apiUrl = `${API_BASE_URL}/api/auth`;
 
 const AuthContext = createContext();
 
@@ -17,11 +20,12 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const res = await fetch("http://localhost:5000/api/auth/me", {
+        const res = await fetch(`${apiUrl}/me`, {
           method: "GET",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -40,7 +44,7 @@ export const AuthProvider = ({ children }) => {
   // ✅ Login function
   const login = async (email, password) => {
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch(`${apiUrl}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -66,7 +70,7 @@ export const AuthProvider = ({ children }) => {
 
   // ✅ Logout function
   const logout = async () => {
-    await fetch("http://localhost:5000/api/auth/logout", {
+    await fetch(`${apiUrl}/logout`, {
       method: "POST",
       credentials: "include",
     });

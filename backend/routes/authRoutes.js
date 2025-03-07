@@ -95,7 +95,16 @@ router.post("/login", async (req, res) => {
     );
 
     res.cookie("token", token, { httpOnly: true });
-    res.json({ message: "Login successful", token });
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        user_id: user.rows[0].user_id,
+        name: user.rows[0].name,
+        email: user.rows[0].email,
+        role: user.rows[0].role,
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
