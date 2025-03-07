@@ -42,12 +42,14 @@ CREATE TABLE wards (
 
 -- Step 7: Create Supervisor-Ward Mapping Table (Many-to-Many)
 CREATE TABLE supervisor_ward (
+    assigned_id    SERIAL PRIMARY KEY,
     supervisor_id  INT NOT NULL,
     ward_id        INT NOT NULL,
-    PRIMARY KEY (supervisor_id, ward_id),
+    UNIQUE (supervisor_id, ward_id),
     FOREIGN KEY (supervisor_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (ward_id) REFERENCES wards(ward_id) ON DELETE CASCADE
 );
+
 
 -- Step 8: Create Department Table
 CREATE TABLE department (
@@ -79,82 +81,87 @@ CREATE TABLE employee (
 
 -- Step 11: Create Attendance Table
 CREATE TABLE attendance (
-    attendance_id    SERIAL PRIMARY KEY,
+    attendance_id   SERIAL PRIMARY KEY,
     emp_id          INT NOT NULL,
-    supervisor_id   INT NOT NULL,
     ward_id         INT NOT NULL,
-    designation_id  INT NOT NULL,
-    status         VARCHAR(10) CHECK (status IN ('present', 'absent', 'leave')) NOT NULL,
-    date           DATE NOT NULL,
-    punch_in_time  TIMESTAMP,
-    punch_out_time TIMESTAMP,
-    punch_in_image TEXT,  -- Image URL
-    punch_out_image TEXT, -- Image URL
-    latitude_in    VARCHAR(50), 
-    longitude_in   VARCHAR(50),
-    in_address     VARCHAR(500),
-    latitude_out   VARCHAR(50), 
-    longitude_out  VARCHAR(50),
-    out_address    VARCHAR(500),
+    date            DATE NOT NULL,
+    punch_in_time   TIMESTAMP,
+    punch_out_time  TIMESTAMP,
+    duration        VARCHAR(5), -- Format: HH:MM
+    punch_in_image  TEXT,  -- Image URL
+    punch_out_image TEXT,  -- Image URL
+    latitude_in     VARCHAR(50), 
+    longitude_in    VARCHAR(50),
+    in_address      VARCHAR(500),
+    latitude_out    VARCHAR(50), 
+    longitude_out   VARCHAR(50),
+    out_address     VARCHAR(500),
     FOREIGN KEY (emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE,
-    FOREIGN KEY (supervisor_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (ward_id) REFERENCES wards(ward_id) ON DELETE CASCADE,
-    FOREIGN KEY (designation_id) REFERENCES designation(designation_id) ON DELETE CASCADE,
     UNIQUE (emp_id, date) -- Ensures only one attendance per worker per day
 );
 
 
 -- demo data
 -- Insert Users (Admins & Supervisors)
-INSERT INTO users (emp_code, name, email, password_hash, phone, role) VALUES
-('ADM001', 'John Doe', 'john.doe@example.com', 'hashed_password_1', '9876543210', 'admin'),
-('SUP001', 'Jane Smith', 'jane.smith@example.com', 'hashed_password_2', '9876543211', 'supervisor'),
-('SUP002', 'Robert Brown', 'robert.brown@example.com', 'hashed_password_3', '9876543212', 'supervisor');
+INSERT INTO users (emp_code, name, email, password_hash, phone, role) VALUES 
+('EMP001', 'John Admin', 'admin@example.com', 'hashed_password_1', '9876543210', 'admin'),
+('EMP002', 'Alice Supervisor', 'alice@example.com', 'hashed_password_2', '9876543211', 'supervisor'),
+('EMP003', 'Bob Supervisor', 'bob@example.com', 'hashed_password_3', '9876543212', 'supervisor');
+
 
 -- Insert Cities
-INSERT INTO cities (city_name, state) VALUES
-('Indore', 'Madhya Pradesh'),
-('Bhopal', 'Madhya Pradesh'),
-('Nagpur', 'Maharashtra');
+INSERT INTO cities (city_name, state) VALUES 
+('New York', 'New York'),
+('Los Angeles', 'California'),
+('Chicago', 'Illinois');
+
 
 -- Insert Zones
-INSERT INTO zones (zone_name, city_id) VALUES
-('Zone A', 1),
-('Zone B', 2),
-('Zone C', 3);
+INSERT INTO zones (zone_name, city_id) VALUES 
+('North Zone', 1),
+('South Zone', 1),
+('West Zone', 2);
 
 -- Insert Wards
-INSERT INTO wards (ward_name, zone_id) VALUES
-('Ward 1', 1),
-('Ward 2', 2),
-('Ward 3', 3);
+INSERT INTO wards (ward_name, zone_id) VALUES 
+('Ward A', 1),
+('Ward B', 2),
+('Ward C', 3);
+
 
 -- Insert Supervisor-Ward Mapping
-INSERT INTO supervisor_ward (supervisor_id, ward_id) VALUES
-(2, 1),
-(2, 2),
-(3, 3);
+INSERT INTO supervisor_ward (supervisor_id, ward_id) VALUES 
+(2, 1),  -- Alice supervises Ward A
+(2, 2),  -- Alice supervises Ward B
+(3, 3);  -- Bob supervises Ward C
 
 -- Insert Departments
-INSERT INTO department (department_name) VALUES
-('Sanitation'),
-('Water Management'),
-('Electricity');
+INSERT INTO department (department_name) VALUES 
+('HR'),
+('IT'),
+('Operations');
 
 -- Insert Designations
-INSERT INTO designation (designation_name, department_id) VALUES
-('Sanitation Worker', 1),
-('Water Technician', 2),
-('Electrician', 3);
+INSERT INTO designation (designation_name, department_id) VALUES 
+('Manager', 1),
+('Software Engineer', 2),
+('Field Officer', 3);
+
 
 -- Insert Employees
-INSERT INTO employee (name, emp_code, phone, ward_id, designation_id) VALUES
-('Mike Johnson', 'EMP001', '9876543220', 1, 1),
-('Sarah Wilson', 'EMP002', '9876543221', 2, 2),
-('David Martinez', 'EMP003', '9876543222', 3, 3);
+INSERT INTO employee (name, emp_code, phone, ward_id, designation_id) VALUES 
+('David Johnson', 'E001', '9000000001', 1, 1),
+('Emma Brown', 'E002', '9000000002', 2, 2),
+('Michael Lee', 'E003', '9000000003', 3, 3),
+('Sarah Wilson', 'E004', '9000000004', 1, 3),
+('James Smith', 'E005', '9000000005', 2, 2);
+
 
 -- Insert Attendance
-INSERT INTO attendance (emp_id, supervisor_id, ward_id, designation_id, status, date, punch_in_time, punch_out_time, punch_in_image, punch_out_image, latitude_in, longitude_in, in_address, latitude_out, longitude_out, out_address) VALUES
-(1, 2, 1, 1, 'present', '2024-02-21', '2024-02-21 08:00:00', '2024-02-21 17:00:00', 'img_in_1.jpg', 'img_out_1.jpg', '40.7128', '-74.0060', 'NYC, USA', '40.7129', '-74.0061', 'NYC, USA'),
-(2, 2, 2, 2, 'absent', '2024-02-21', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(3, 3, 3, 3, 'leave', '2024-02-21', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO attendance (emp_id, ward_id, date, punch_in_time, punch_out_time, duration, punch_in_image, punch_out_image, latitude_in, longitude_in, in_address, latitude_out, longitude_out, out_address) VALUES 
+(1, 1, '2024-02-26', '2024-02-26 08:00:00', '2024-02-26 17:00:00', '09:00', 'in_1.jpg', 'out_1.jpg', '40.7128', '-74.0060', 'New York Office', '40.7128', '-74.0060', 'New York Office'),
+(2, 2, '2024-02-26', '2024-02-26 09:00:00', '2024-02-26 18:00:00', '09:00', 'in_2.jpg', 'out_2.jpg', '34.0522', '-118.2437', 'LA Office', '34.0522', '-118.2437', 'LA Office'),
+(3, 3, '2024-02-26', '2024-02-26 07:30:00', '2024-02-26 16:30:00', '09:00', 'in_3.jpg', 'out_3.jpg', '41.8781', '-87.6298', 'Chicago Office', '41.8781', '-87.6298', 'Chicago Office'),
+(4, 1, '2024-02-26', '2024-02-26 08:15:00', '2024-02-26 17:15:00', '09:00', 'in_4.jpg', 'out_4.jpg', '40.7128', '-74.0060', 'New York Office', '40.7128', '-74.0060', 'New York Office'),
+(5, 2, '2024-02-26', '2024-02-26 09:30:00', '2024-02-26 18:30:00', '09:00', 'in_5.jpg', 'out_5.jpg', '34.0522', '-118.2437', 'LA Office', '34.0522', '-118.2437', 'LA Office');
