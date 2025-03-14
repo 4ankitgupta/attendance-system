@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-// import API_BASE_URL from "../config";
+import API_BASE_URL from "../config";
 
-// const apiUrl = `${API_BASE_URL}/api/supervisor`;
+const apiUrl = `${API_BASE_URL}/api`;
 
 function Supervisors() {
   const [supervisors, setSupervisors] = useState([]);
@@ -25,7 +25,7 @@ function Supervisors() {
 
   const fetchSupervisor = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/supervisor");
+      const response = await axios.get(`${apiUrl}/supervisor`);
       setSupervisors(response.data);
     } catch (error) {
       console.error("Error fetching user's data", error);
@@ -48,7 +48,7 @@ function Supervisors() {
       if (isEditing && !changePassword) {
         // Update supervisor
         await axios.put(
-          "http://localhost:5000/api/auth/update",
+          `${apiUrl}/auth/update`,
           {
             passChange: false,
             user_id: formData.user_id,
@@ -62,7 +62,7 @@ function Supervisors() {
         );
       } else if (isEditing && changePassword) {
         // Update supervisor with password
-        await axios.put("http://localhost:5000/api/auth/update", {
+        await axios.put(`${apiUrl}/auth/update`, {
           passChange: true,
           user_id: formData.user_id,
           name: formData.name,
@@ -75,7 +75,7 @@ function Supervisors() {
       } else {
         // Add new supervisor (Only Admins should add)
         await axios.post(
-          "http://localhost:5000/api/auth/register",
+          `${apiUrl}/auth/register`,
           {
             name: formData.name,
             emp_code: formData.emp_code,
@@ -110,7 +110,7 @@ function Supervisors() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/supervisor/${id}`);
+      await axios.delete(`${apiUrl}/supervisor/${id}`);
       setSupervisors(supervisors.filter((sup) => sup.user_id !== id));
       fetchSupervisor();
     } catch (error) {

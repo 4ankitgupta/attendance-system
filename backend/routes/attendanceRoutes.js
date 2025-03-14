@@ -2,12 +2,15 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
 
-// 🟢 Fetch attendance report with formatted date and time
-router.get("/", async (req, res) => {
+// 🟢 Fetch attendance report for a specific date (current date or selected date)
+router.post("/", async (req, res) => {
+  // Get the date from query parameters, if available; otherwise, default to today's date
+  const date = req.query.date || new Date().toISOString().split("T")[0]; // Default to current date
+
   try {
     const result = await pool.query(
       `SELECT 
-        ROW_NUMBER() OVER () AS sr_no,
+        ROW_NUMBER() OVER (ORDER BY a.date DESC, a.attendance_id) AS sr_no,
         e.name, 
         e.emp_code, 
         TO_CHAR(a.date, 'DD-MM-YYYY') AS date,
@@ -27,13 +30,15 @@ router.get("/", async (req, res) => {
       JOIN wards w ON a.ward_id = w.ward_id
       JOIN zones z ON w.zone_id = z.zone_id
       JOIN cities c ON z.city_id = c.city_id
-      ORDER BY a.date DESC;`
+      WHERE a.date = $1  -- Filter attendance by the selected or current date
+      ORDER BY a.date DESC, a.attendance_id;`,
+      [date] // Pass the date parameter to the query
     );
 
-    res.json(result.rows);
+    res.json(result.rows); // Send the result as JSON
   } catch (error) {
     console.error("Error fetching attendance report:", error);
-    res.status(500).json({ error: "Database error" });
+    res.status(500).json({ error: "Database error" }); // Send error response
   }
 });
 
