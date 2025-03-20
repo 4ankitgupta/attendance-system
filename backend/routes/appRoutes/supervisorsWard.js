@@ -11,22 +11,38 @@ router.post("/", async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT e.emp_id, e.name AS employee_name, e.emp_code, e.phone, 
-              w.ward_id, w.ward_name, 
-              z.zone_id, z.zone_name, 
-              c.city_id, c.city_name,
-              d.designation_name, 
-              dept.department_name
-       FROM employee e
-       JOIN wards w ON e.ward_id = w.ward_id
-       JOIN zones z ON w.zone_id = z.zone_id
-       JOIN cities c ON z.city_id = c.city_id
-       JOIN supervisor_ward sw ON w.ward_id = sw.ward_id
-       JOIN users u ON sw.supervisor_id = u.user_id
-       JOIN designation d ON e.designation_id = d.designation_id
-       JOIN department dept ON d.department_id = dept.department_id
-       WHERE u.user_id = $1 
-       ORDER BY w.ward_id, e.name;`,
+      `SELECT 
+        e.emp_id, 
+        e.name AS employee_name, 
+        e.emp_code, 
+        e.phone, 
+        w.ward_id, 
+        w.ward_name, 
+        z.zone_id, 
+        z.zone_name, 
+        c.city_id, 
+        c.city_name, 
+        d.designation_name, 
+        dept.department_name,
+        CASE 
+            WHEN a.emp_id IS NULL OR a.punch_in_time IS NULL THEN 'Not Marked'
+            WHEN a.punch_out_time IS NULL THEN 'Present'
+            ELSE 'Marked'
+        END AS attendance_status
+    FROM employee e
+    JOIN wards w ON e.ward_id = w.ward_id
+    JOIN zones z ON w.zone_id = z.zone_id
+    JOIN cities c ON z.city_id = c.city_id
+    JOIN supervisor_ward sw ON w.ward_id = sw.ward_id
+    JOIN users u ON sw.supervisor_id = u.user_id
+    JOIN designation d ON e.designation_id = d.designation_id
+    JOIN department dept ON d.department_id = dept.department_id
+    LEFT JOIN attendance a 
+        ON e.emp_id = a.emp_id 
+        AND a.date = CURRENT_DATE 
+    WHERE u.user_id = $1
+    ORDER BY w.ward_id, e.name;
+`,
       [user_id]
     );
 
@@ -57,6 +73,7 @@ router.post("/", async (req, res) => {
         phone: row.phone,
         designation: row.designation_name,
         department: row.department_name,
+        attendance_status: row.attendance_status,
       });
     });
 
