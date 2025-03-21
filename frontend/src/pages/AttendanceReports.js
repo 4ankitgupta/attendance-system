@@ -1,27 +1,112 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 
-const apiUrl = `${API_BASE_URL}/api/attendance`;
+const apiUrl = `${API_BASE_URL}/api`;
 
 function AttendanceReports() {
   const [records, setRecords] = useState([]);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imageCache, setImageCache] = useState({});
+
+  // Memoize preloadImages using useCallback
+  const preloadImages = useCallback(
+    async (records) => {
+      const newImageCache = { ...imageCache };
+
+      for (const record of records) {
+        if (record.punch_in_image) {
+          const cacheKey = `${record.attendance_id}_IN`;
+          if (!newImageCache[cacheKey]) {
+            const imageUrl = await fetchImage(record.attendance_id, "IN");
+            if (imageUrl) {
+              newImageCache[cacheKey] = imageUrl;
+            }
+          }
+        }
+
+        if (record.punch_out_image) {
+          const cacheKey = `${record.attendance_id}_OUT`;
+          if (!newImageCache[cacheKey]) {
+            const imageUrl = await fetchImage(record.attendance_id, "OUT");
+            if (imageUrl) {
+              newImageCache[cacheKey] = imageUrl;
+            }
+          }
+        }
+      }
+
+      setImageCache(newImageCache);
+    },
+    [imageCache]
+  );
 
   useEffect(() => {
     const fetchRecords = async () => {
       try {
-        const response = await axios.get(`${apiUrl}?date=${selectedDate}`);
+        const response = await axios.post(
+          `${apiUrl}/attendance?date=${selectedDate}`
+        );
         setRecords(response.data);
+
+        // Preload images for all records
+        preloadImages(response.data);
       } catch (error) {
         console.error("Error fetching attendance data:", error);
       }
     };
 
     fetchRecords();
-  }, [selectedDate]); // ✅ Runs when selectedDate changes
+  }, [selectedDate, preloadImages]);
+  // Function to fetch image data
+  const fetchImage = async (attendanceId, punchType) => {
+    try {
+      const response = await axios.get(
+        `${apiUrl}/app/attendance/employee/image/${attendanceId}/${punchType}`,
+        {
+          responseType: "blob", // Fetch image as a Blob
+        }
+      );
+
+      // Convert Blob to a URL
+      const imageUrl = URL.createObjectURL(response.data);
+      return imageUrl;
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      return null;
+    }
+  };
+
+  // Function to handle "View Image" button click
+  const handleViewImage = async (attendanceId, punchType) => {
+    const cacheKey = `${attendanceId}_${punchType}`;
+
+    if (imageCache[cacheKey]) {
+      // Use preloaded image
+      setSelectedImage(imageCache[cacheKey]);
+      setIsModalOpen(true);
+    } else {
+      // Fetch image on demand
+      setIsLoading(true);
+      const imageUrl = await fetchImage(attendanceId, punchType);
+      if (imageUrl) {
+        setSelectedImage(imageUrl);
+        setIsModalOpen(true);
+      }
+      setIsLoading(false);
+    }
+  };
+
+  // Function to close the modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedImage(null); // Clear the image URL
+  };
 
   return (
     <div className="p-5">
@@ -40,7 +125,7 @@ function AttendanceReports() {
       </div>
 
       {/* Attendance Table */}
-      <div className="w-full overflow-x-auto">
+      <div className="overflow-x-scroll max-w-full">
         <table className="bg-white shadow-md rounded-lg border border-gray-300 w-full min-w-max">
           <thead className="bg-gray-200 text-gray-700">
             <tr>
@@ -80,11 +165,14 @@ function AttendanceReports() {
                   <td className="p-3 border">{record.in_address || "-"}</td>
                   <td className="p-3 border text-center">
                     {record.punch_in_image ? (
-                      <img
-                        src={record.punch_in_image}
-                        alt="Punch In"
-                        className="w-10 h-10 rounded mx-auto"
-                      />
+                      <button
+                        onClick={() =>
+                          handleViewImage(record.attendance_id, "IN")
+                        }
+                        className="text-blue-500 hover:underline"
+                      >
+                        View Image
+                      </button>
                     ) : (
                       "-"
                     )}
@@ -93,11 +181,14 @@ function AttendanceReports() {
                   <td className="p-3 border">{record.out_address || "-"}</td>
                   <td className="p-3 border text-center">
                     {record.punch_out_image ? (
-                      <img
-                        src={record.punch_out_image}
-                        alt="Punch Out"
-                        className="w-10 h-10 rounded mx-auto"
-                      />
+                      <button
+                        onClick={() =>
+                          handleViewImage(record.attendance_id, "OUT")
+                        }
+                        className="text-blue-500 hover:underline"
+                      >
+                        View Image
+                      </button>
                     ) : (
                       "-"
                     )}
@@ -115,6 +206,36 @@ function AttendanceReports() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal for Image Display */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Image Preview</h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="flex justify-center">
+              {isLoading ? (
+                <p className="text-gray-500">Loading image...</p>
+              ) : selectedImage ? (
+                <img
+                  src={selectedImage}
+                  alt="Preview"
+                  className="max-w-full max-h-96"
+                />
+              ) : (
+                <p className="text-gray-500">No image available.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

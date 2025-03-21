@@ -11,6 +11,7 @@ router.post("/", async (req, res) => {
     const result = await pool.query(
       `SELECT 
         ROW_NUMBER() OVER (ORDER BY a.date DESC, a.attendance_id) AS sr_no,
+        attendance_id,
         e.name, 
         e.emp_code, 
         TO_CHAR(a.date, 'DD-MM-YYYY') AS date,

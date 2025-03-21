@@ -1,4 +1,5 @@
 const express = require("express");
+const axios = require("axios");
 const router = express.Router();
 const pool = require("../../config/db");
 const multer = require("multer");
@@ -207,11 +208,38 @@ router.get("/image/:attendance_id/:punch_type", async (req, res) => {
     }
 
     const imageUrl = result.rows[0].image_url;
-    res.json({ imageUrl });
+
+    // Fetch the image from Backblaze B2 with Authorization
+    const authResponse = await axios.post(
+      "https://api.backblazeb2.com/b2api/v2/b2_authorize_account",
+      {},
+      {
+        auth: {
+          username: process.env.B2_APPLICATION_KEY_ID,
+          password: process.env.B2_APPLICATION_KEY,
+        },
+      }
+    );
+
+    const authToken = authResponse.data.authorizationToken;
+
+    const imageResponse = await axios.get(imageUrl, {
+      headers: {
+        Authorization: authToken,
+      },
+      responseType: "base64",
+    });
+
+    const imageBuffer = Buffer.from(imageResponse.data, "base64");
+
+    // Set the appropriate Content-Type header
+    res.set("Content-Type", "image/jpg");
+
+    // Send the image data in the response
+    res.send(imageBuffer);
   } catch (error) {
     console.error("Error fetching image:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 module.exports = router;
