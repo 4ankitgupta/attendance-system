@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 
@@ -12,39 +12,6 @@ function AttendanceReports() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [imageCache, setImageCache] = useState({});
-
-  // Memoize preloadImages using useCallback
-  const preloadImages = useCallback(
-    async (records) => {
-      const newImageCache = { ...imageCache };
-
-      for (const record of records) {
-        if (record.punch_in_image) {
-          const cacheKey = `${record.attendance_id}_IN`;
-          if (!newImageCache[cacheKey]) {
-            const imageUrl = await fetchImage(record.attendance_id, "IN");
-            if (imageUrl) {
-              newImageCache[cacheKey] = imageUrl;
-            }
-          }
-        }
-
-        if (record.punch_out_image) {
-          const cacheKey = `${record.attendance_id}_OUT`;
-          if (!newImageCache[cacheKey]) {
-            const imageUrl = await fetchImage(record.attendance_id, "OUT");
-            if (imageUrl) {
-              newImageCache[cacheKey] = imageUrl;
-            }
-          }
-        }
-      }
-
-      setImageCache(newImageCache);
-    },
-    [imageCache]
-  );
 
   useEffect(() => {
     const fetchRecords = async () => {
@@ -53,16 +20,14 @@ function AttendanceReports() {
           `${apiUrl}/attendance?date=${selectedDate}`
         );
         setRecords(response.data);
-
-        // Preload images for all records
-        preloadImages(response.data);
       } catch (error) {
         console.error("Error fetching attendance data:", error);
       }
     };
 
     fetchRecords();
-  }, [selectedDate, preloadImages]);
+  }, [selectedDate]);
+
   // Function to fetch image data
   const fetchImage = async (attendanceId, punchType) => {
     try {
@@ -82,24 +47,15 @@ function AttendanceReports() {
     }
   };
 
-  // Function to handle "View Image" button click
-  const handleViewImage = async (attendanceId, punchType) => {
-    const cacheKey = `${attendanceId}_${punchType}`;
-
-    if (imageCache[cacheKey]) {
-      // Use preloaded image
-      setSelectedImage(imageCache[cacheKey]);
+  // Function to handle image click
+  const handleImageClick = async (attendanceId, punchType) => {
+    setIsLoading(true);
+    const imageUrl = await fetchImage(attendanceId, punchType);
+    if (imageUrl) {
+      setSelectedImage(imageUrl);
       setIsModalOpen(true);
-    } else {
-      // Fetch image on demand
-      setIsLoading(true);
-      const imageUrl = await fetchImage(attendanceId, punchType);
-      if (imageUrl) {
-        setSelectedImage(imageUrl);
-        setIsModalOpen(true);
-      }
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
   // Function to close the modal
@@ -165,14 +121,14 @@ function AttendanceReports() {
                   <td className="p-3 border">{record.in_address || "-"}</td>
                   <td className="p-3 border text-center">
                     {record.punch_in_image ? (
-                      <button
+                      <img
+                        src={`${apiUrl}/app/attendance/employee/image/${record.attendance_id}/IN`}
+                        alt="Punch In"
+                        className="w-16 h-16 object-cover cursor-pointer"
                         onClick={() =>
-                          handleViewImage(record.attendance_id, "IN")
+                          handleImageClick(record.attendance_id, "IN")
                         }
-                        className="text-blue-500 hover:underline"
-                      >
-                        View Image
-                      </button>
+                      />
                     ) : (
                       "-"
                     )}
@@ -181,14 +137,14 @@ function AttendanceReports() {
                   <td className="p-3 border">{record.out_address || "-"}</td>
                   <td className="p-3 border text-center">
                     {record.punch_out_image ? (
-                      <button
+                      <img
+                        src={`${apiUrl}/app/attendance/employee/image/${record.attendance_id}/OUT`}
+                        alt="Punch Out"
+                        className="w-16 h-16 object-cover cursor-pointer"
                         onClick={() =>
-                          handleViewImage(record.attendance_id, "OUT")
+                          handleImageClick(record.attendance_id, "OUT")
                         }
-                        className="text-blue-500 hover:underline"
-                      >
-                        View Image
-                      </button>
+                      />
                     ) : (
                       "-"
                     )}
