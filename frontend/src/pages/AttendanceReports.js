@@ -32,7 +32,7 @@ function AttendanceReports() {
   const fetchImage = async (attendanceId, punchType) => {
     try {
       const response = await axios.get(
-        `${apiUrl}/app/attendance/employee/image/${attendanceId}/${punchType}`,
+        `${apiUrl}/app/attendance/employee/image?attendance_id=${attendanceId}&punch_type=${punchType}`,
         {
           responseType: "blob", // Fetch image as a Blob
         }
@@ -122,7 +122,7 @@ function AttendanceReports() {
                   <td className="p-3 border text-center">
                     {record.punch_in_image ? (
                       <img
-                        src={`${apiUrl}/app/attendance/employee/image/${record.attendance_id}/IN`}
+                        src={`${apiUrl}/app/attendance/employee/image?attendance_id=${record.attendance_id}&punch_type=IN`}
                         alt="Punch In"
                         className="w-16 h-16 object-cover cursor-pointer"
                         onClick={() =>
@@ -138,7 +138,7 @@ function AttendanceReports() {
                   <td className="p-3 border text-center">
                     {record.punch_out_image ? (
                       <img
-                        src={`${apiUrl}/app/attendance/employee/image/${record.attendance_id}/OUT`}
+                        src={`${apiUrl}/app/attendance/employee/image?attendance_id=${record.attendance_id}&punch_type=OUT`}
                         alt="Punch Out"
                         className="w-16 h-16 object-cover cursor-pointer"
                         onClick={() =>

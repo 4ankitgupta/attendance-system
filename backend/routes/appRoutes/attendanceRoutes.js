@@ -5,6 +5,7 @@ const pool = require("../../config/db");
 const multer = require("multer");
 const fs = require("fs");
 const { uploadImageToB2 } = require("../../utils/b2Storage"); // BlackBlaze Upload
+const sharp = require("sharp");
 
 // Set up Multer for file uploads
 const storage = multer.memoryStorage(); // Store image in memory
@@ -115,63 +116,83 @@ router.put("/", upload.single("image"), async (req, res) => {
 
     const { punch_in_time, punch_out_time } = attendanceResult.rows[0];
 
-    // **Condition 1: Prevent multiple Punch-INs**
+    // Validate punch conditions
     if (punch_type === "IN" && punch_in_time) {
       return res
         .status(400)
         .json({ error: "User has already punched in for today." });
     }
-
-    // **Condition 2: Prevent multiple Punch-OUTs**
     if (punch_type === "OUT" && punch_out_time) {
       return res
         .status(400)
         .json({ error: "User has already punched out for today." });
     }
-
-    // **Condition 3: Prevent Punch-OUT if Punch-IN hasn't happened**
     if (punch_type === "OUT" && !punch_in_time) {
       return res
         .status(400)
         .json({ error: "User must punch in before punching out." });
     }
 
-    let updateQuery;
-    let updateValues;
     let imageUrl = null;
 
-    // Upload image if provided
+    // Process and upload image if provided
     if (req.file) {
-      const imageBuffer = req.file.buffer.toString("base64");
-      const uploadedImageUrl = await uploadImageToB2(
-        imageBuffer,
-        `attendance_${attendance_id}_${punch_type}.jpg`
-      );
-      imageUrl = uploadedImageUrl;
+      try {
+        // Compress and resize the image
+        const compressedImageBuffer = await sharp(req.file.buffer)
+          .resize({
+            width: 800, // Set maximum width
+            height: 800, // Set maximum height
+            fit: sharp.fit.inside, // Keep aspect ratio
+            withoutEnlargement: true, // Don't enlarge if smaller
+          })
+          .jpeg({
+            // Convert to JPEG (if not already)
+            quality: 70, // Adjust quality (70% is a good balance)
+            mozjpeg: true, // Use mozjpeg compression
+          })
+          .toBuffer();
+
+        // Upload the compressed image
+        imageUrl = await uploadImageToB2(
+          compressedImageBuffer,
+          `attendance_${attendance_id}_${punch_type}.jpg`
+        );
+      } catch (compressionError) {
+        console.error("Image compression error:", compressionError);
+        // Fallback to original image if compression fails
+        imageUrl = await uploadImageToB2(
+          req.file.buffer,
+          `attendance_${attendance_id}_${punch_type}.jpg`
+        );
+      }
     }
 
-    // **Updating Attendance Based on Punch Type**
-    if (punch_type === "IN") {
-      updateQuery = `UPDATE attendance SET 
-                        punch_in_time = NOW(),
-                        latitude_in = $1, 
-                        longitude_in = $2, 
-                        in_address = $3, 
-                        punch_in_image = $4
-                     WHERE attendance_id = $5 RETURNING *`;
-      updateValues = [latitude, longitude, address, imageUrl, attendance_id];
-    } else {
-      updateQuery = `UPDATE attendance SET 
-                        punch_out_time = NOW(),
-                        latitude_out = $1, 
-                        longitude_out = $2, 
-                        out_address = $3, 
-                        punch_out_image = $4
-                     WHERE attendance_id = $5 RETURNING *`;
-      updateValues = [latitude, longitude, address, imageUrl, attendance_id];
-    }
+    // Update attendance record
+    const updateQuery =
+      punch_type === "IN"
+        ? `UPDATE attendance SET 
+          punch_in_time = NOW(),
+          latitude_in = $1, 
+          longitude_in = $2, 
+          in_address = $3, 
+          punch_in_image = $4
+         WHERE attendance_id = $5 RETURNING *`
+        : `UPDATE attendance SET 
+          punch_out_time = NOW(),
+          latitude_out = $1, 
+          longitude_out = $2, 
+          out_address = $3, 
+          punch_out_image = $4
+         WHERE attendance_id = $5 RETURNING *`;
 
-    // Execute Update Query
+    const updateValues = [
+      latitude,
+      longitude,
+      address,
+      imageUrl,
+      attendance_id,
+    ];
     const result = await pool.query(updateQuery, updateValues);
 
     if (result.rowCount === 0) {
@@ -188,14 +209,17 @@ router.put("/", upload.single("image"), async (req, res) => {
   }
 });
 
-// Route to get attendance image
-router.get("/image/:attendance_id/:punch_type", async (req, res) => {
-  const { attendance_id, punch_type } = req.params;
+// Route to get attendance image - Optimized version
+router.get("/image", async (req, res) => {
+  const { attendance_id, punch_type } = req.query;
+
+  if (!attendance_id || !punch_type) {
+    return res.status(400).json({ error: "Missing required query parameters" });
+  }
 
   try {
-    // Determine which column to retrieve based on punch type
     const imageColumn =
-      punch_type === "IN" ? "punch_in_image" : "punch_out_image";
+      punch_type.toUpperCase() === "IN" ? "punch_in_image" : "punch_out_image";
 
     // Fetch image URL from the database
     const result = await pool.query(
@@ -227,19 +251,21 @@ router.get("/image/:attendance_id/:punch_type", async (req, res) => {
       headers: {
         Authorization: authToken,
       },
-      responseType: "base64",
+      responseType: "stream", // Stream the response directly
     });
 
-    const imageBuffer = Buffer.from(imageResponse.data, "base64");
+    // Set proper headers
+    res.set({
+      "Content-Type": "image/jpeg",
+      "Content-Disposition": `inline; filename="attendance_${attendance_id}_${punch_type}.jpg"`,
+    });
 
-    // Set the appropriate Content-Type header
-    res.set("Content-Type", "image/jpg");
-
-    // Send the image data in the response
-    res.send(imageBuffer);
+    // Pipe the image stream directly to the response
+    imageResponse.data.pipe(res);
   } catch (error) {
     console.error("Error fetching image:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 module.exports = router;
