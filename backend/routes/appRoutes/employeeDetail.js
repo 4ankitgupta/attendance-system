@@ -4,9 +4,6 @@ const pool = require("../../config/db");
 
 router.get("/", async (req, res) => {
   try {
-    // const { empId } = req.params;
-    // const { month, year } = req.query;
-
     const { empId, month } = req.query;
 
     if (!month) {

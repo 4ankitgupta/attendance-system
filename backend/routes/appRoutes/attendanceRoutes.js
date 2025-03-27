@@ -5,7 +5,6 @@ const pool = require("../../config/db");
 const multer = require("multer");
 const fs = require("fs");
 const { uploadImageToB2 } = require("../../utils/b2Storage"); // BlackBlaze Upload
-const sharp = require("sharp");
 
 // Set up Multer for file uploads
 const storage = multer.memoryStorage(); // Store image in memory
@@ -116,7 +115,7 @@ router.put("/", upload.single("image"), async (req, res) => {
 
     const { punch_in_time, punch_out_time } = attendanceResult.rows[0];
 
-    // Validate punch conditions
+    // Validate punch conditions (keep your existing validation logic)
     if (punch_type === "IN" && punch_in_time) {
       return res
         .status(400)
@@ -135,37 +134,13 @@ router.put("/", upload.single("image"), async (req, res) => {
 
     let imageUrl = null;
 
-    // Process and upload image if provided
+    // Upload image directly as binary if provided
     if (req.file) {
-      try {
-        // Compress and resize the image
-        const compressedImageBuffer = await sharp(req.file.buffer)
-          .resize({
-            width: 800, // Set maximum width
-            height: 800, // Set maximum height
-            fit: sharp.fit.inside, // Keep aspect ratio
-            withoutEnlargement: true, // Don't enlarge if smaller
-          })
-          .jpeg({
-            // Convert to JPEG (if not already)
-            quality: 70, // Adjust quality (70% is a good balance)
-            mozjpeg: true, // Use mozjpeg compression
-          })
-          .toBuffer();
-
-        // Upload the compressed image
-        imageUrl = await uploadImageToB2(
-          compressedImageBuffer,
-          `attendance_${attendance_id}_${punch_type}.jpg`
-        );
-      } catch (compressionError) {
-        console.error("Image compression error:", compressionError);
-        // Fallback to original image if compression fails
-        imageUrl = await uploadImageToB2(
-          req.file.buffer,
-          `attendance_${attendance_id}_${punch_type}.jpg`
-        );
-      }
+      // Upload the raw buffer directly without base64 conversion
+      imageUrl = await uploadImageToB2(
+        req.file.buffer, // Direct binary buffer
+        `attendance_${attendance_id}_${punch_type}.jpg`
+      );
     }
 
     // Update attendance record

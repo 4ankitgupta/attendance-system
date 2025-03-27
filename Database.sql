@@ -75,6 +75,9 @@ CREATE TABLE employee (
     ward_id     INT NOT NULL,
 	designation_id	INT NOT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	face_confidence DECIMAL(5,2),
+	face_embedding TEXT,
+	face_id VARCHAR(255),
     FOREIGN KEY (ward_id) REFERENCES wards(ward_id) ON DELETE CASCADE,
     FOREIGN KEY (designation_id) REFERENCES designation(designation_id) ON DELETE CASCADE
 );
@@ -165,3 +168,10 @@ INSERT INTO attendance (emp_id, ward_id, date, punch_in_time, punch_out_time, du
 (3, 3, '2024-02-26', '2024-02-26 07:30:00', '2024-02-26 16:30:00', '09:00', 'in_3.jpg', 'out_3.jpg', '41.8781', '-87.6298', 'Chicago Office', '41.8781', '-87.6298', 'Chicago Office'),
 (4, 1, '2024-02-26', '2024-02-26 08:15:00', '2024-02-26 17:15:00', '09:00', 'in_4.jpg', 'out_4.jpg', '40.7128', '-74.0060', 'New York Office', '40.7128', '-74.0060', 'New York Office'),
 (5, 2, '2024-02-26', '2024-02-26 09:30:00', '2024-02-26 18:30:00', '09:00', 'in_5.jpg', 'out_5.jpg', '34.0522', '-118.2437', 'LA Office', '34.0522', '-118.2437', 'LA Office');
+
+
+-- ALTER TABLE employee 
+-- ADD COLUMN IF NOT EXISTS face_confidence DECIMAL(5,2),
+-- ADD COLUMN IF NOT EXISTS face_embedding TEXT;
+
+-- ALTER TABLE employee ADD COLUMN IF NOT EXISTS face_id VARCHAR(255);
