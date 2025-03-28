@@ -88,18 +88,19 @@ function AttendanceReports() {
               <th className="p-3 border">Sr No.</th>
               <th className="p-3 border">Name</th>
               <th className="p-3 border">EmpCode</th>
-              <th className="p-3 border">Date</th>
+              <th className="p-3 border">Contact No.</th>
+              <th className="p-3 border">In Time</th>
+              <th className="p-3 border">In Image</th>
+              <th className="p-3 border">PunchedIn By</th>
+              <th className="p-3 border">Out Time</th>
+              <th className="p-3 border">Out Image</th>
+              <th className="p-3 border">PunchedOut By</th>
+              <th className="p-3 border">In Address</th>
+              <th className="p-3 border">Out Address</th>
+              <th className="p-3 border">Duration</th>
               <th className="p-3 border">Ward</th>
               <th className="p-3 border">Zone</th>
               <th className="p-3 border">City</th>
-              <th className="p-3 border">Contact No.</th>
-              <th className="p-3 border">Punch In</th>
-              <th className="p-3 border">In Address</th>
-              <th className="p-3 border">Punch In Image</th>
-              <th className="p-3 border">Punch Out</th>
-              <th className="p-3 border">Out Address</th>
-              <th className="p-3 border">Punch Out Image</th>
-              <th className="p-3 border">Duration</th>
             </tr>
           </thead>
           <tbody>
@@ -112,13 +113,8 @@ function AttendanceReports() {
                   <td className="p-3 border">{record.sr_no}</td>
                   <td className="p-3 border">{record.name}</td>
                   <td className="p-3 border">{record.emp_code}</td>
-                  <td className="p-3 border">{record.date}</td>
-                  <td className="p-3 border">{record.ward}</td>
-                  <td className="p-3 border">{record.zone}</td>
-                  <td className="p-3 border">{record.city}</td>
                   <td className="p-3 border">{record.contact_no}</td>
                   <td className="p-3 border">{record.punch_in || "-"}</td>
-                  <td className="p-3 border">{record.in_address || "-"}</td>
                   <td className="p-3 border text-center">
                     {record.punch_in_image ? (
                       <img
@@ -133,8 +129,8 @@ function AttendanceReports() {
                       "-"
                     )}
                   </td>
+                  <td className="p-3 border">{record.punched_in_by}</td>
                   <td className="p-3 border">{record.punch_out || "-"}</td>
-                  <td className="p-3 border">{record.out_address || "-"}</td>
                   <td className="p-3 border text-center">
                     {record.punch_out_image ? (
                       <img
@@ -149,7 +145,13 @@ function AttendanceReports() {
                       "-"
                     )}
                   </td>
+                  <td className="p-3 border">{record.punched_out_by}</td>
+                  <td className="p-3 border">{record.in_address || "-"}</td>
+                  <td className="p-3 border">{record.out_address || "-"}</td>
                   <td className="p-3 border">{record.duration}</td>
+                  <td className="p-3 border">{record.ward}</td>
+                  <td className="p-3 border">{record.zone}</td>
+                  <td className="p-3 border">{record.city}</td>
                 </tr>
               ))
             ) : (

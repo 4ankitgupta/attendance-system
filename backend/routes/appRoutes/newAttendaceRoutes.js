@@ -104,7 +104,13 @@ async function getOrCreateAttendanceRecord(emp_id, date) {
   return attendance;
 }
 
-async function processPunch(attendanceId, punchType, imageFile, locationData) {
+async function processPunch(
+  attendanceId,
+  punchType,
+  imageFile,
+  userId,
+  locationData
+) {
   let imageUrl = null;
 
   if (imageFile) {
@@ -121,8 +127,9 @@ async function processPunch(attendanceId, punchType, imageFile, locationData) {
       ${isPunchIn ? "latitude_in" : "latitude_out"} = $1,
       ${isPunchIn ? "longitude_in" : "longitude_out"} = $2,
       ${isPunchIn ? "in_address" : "out_address"} = $3,
-      ${isPunchIn ? "punch_in_image" : "punch_out_image"} = $4
-    WHERE attendance_id = $5
+      ${isPunchIn ? "punch_in_image" : "punch_out_image"} = $4,
+      ${isPunchIn ? "punched_in_by" : "punched_out_by"} = $5
+    WHERE attendance_id = $6
     RETURNING *
   `;
 
@@ -131,6 +138,7 @@ async function processPunch(attendanceId, punchType, imageFile, locationData) {
     locationData.longitude,
     locationData.address,
     imageUrl,
+    userId,
     attendanceId,
   ]);
 
@@ -159,7 +167,8 @@ router.post("/", async (req, res) => {
 });
 
 router.put("/", upload.single("image"), async (req, res) => {
-  const { attendance_id, punch_type, latitude, longitude, address } = req.body;
+  const { attendance_id, punch_type, latitude, longitude, address, userId } =
+    req.body;
 
   if (!attendance_id || !punch_type || !latitude || !longitude || !address) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -188,11 +197,17 @@ router.put("/", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "Must punch in first" });
     }
 
-    const updated = await processPunch(attendance_id, punch_type, req.file, {
-      latitude,
-      longitude,
-      address,
-    });
+    const updated = await processPunch(
+      attendance_id,
+      punch_type,
+      req.file,
+      userId,
+      {
+        latitude,
+        longitude,
+        address,
+      }
+    );
 
     res.json({
       message: `Punch ${punch_type} updated successfully`,
@@ -256,7 +271,7 @@ router.get("/image", async (req, res) => {
 
 router.post("/face-attendance", upload.single("image"), async (req, res) => {
   try {
-    const { punch_type, latitude, longitude, address } = req.body;
+    const { punch_type, latitude, longitude, userId, address } = req.body;
 
     // Face detection logic
     const searchParams = {
@@ -308,6 +323,7 @@ router.post("/face-attendance", upload.single("image"), async (req, res) => {
       attendance.attendance_id,
       punch_type,
       req.file,
+      userId,
       { latitude: latitude, longitude: longitude, address: address }
     );
 
@@ -321,9 +337,8 @@ router.post("/face-attendance", upload.single("image"), async (req, res) => {
           : updated.punch_out_time,
     });
   } catch (error) {
-    console.error("Face attendance error:", error);
     res.status(500).json({
-      error: "Try manual attendance if this persists",
+      error: "There are no faces in the image",
       fallback_route: "POST /attendance",
     });
   }
