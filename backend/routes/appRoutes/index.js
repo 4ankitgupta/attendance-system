@@ -3,7 +3,7 @@ const router = express.Router();
 
 // Import all route files
 const supervisorsWards = require("./supervisorsWard");
-const attendanceRoutes = require("./attendanceRoutes");
+const attendanceRoutes = require("./newAttendaceRoutes");
 const employeeRoutes = require("./employeeDetail");
 const faceRoutes = require("./faceRoutes");
 

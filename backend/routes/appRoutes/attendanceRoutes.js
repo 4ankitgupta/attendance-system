@@ -3,18 +3,17 @@ const axios = require("axios");
 const router = express.Router();
 const pool = require("../../config/db");
 const multer = require("multer");
-const fs = require("fs");
-const { uploadImageToB2 } = require("../../utils/b2Storage"); // BlackBlaze Upload
+const { uploadImageToB2 } = require("../../utils/b2Storage");
 
 // Set up Multer for file uploads
-const storage = multer.memoryStorage(); // Store image in memory
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 // Fetch or create attendance record for an employee
 router.post("/", async (req, res) => {
-  const { emp_id, date, ward_id } = req.body;
+  const { emp_id } = req.body;
   const today = new Date().toISOString().split("T")[0]; // Format YYYY-MM-DD
-  const attendanceDate = date || today;
+  const attendanceDate = today;
 
   if (!emp_id) {
     return res.status(400).json({ error: "Employee ID is required" });
@@ -40,6 +39,15 @@ router.post("/", async (req, res) => {
     );
 
     let attendance;
+
+    const wardDetail = await pool.query(
+      `SELECT ward_id from employee e where e.emp_id = $1`,
+      [emp_id]
+    );
+    let ward_id;
+    if (wardDetail.rows.length > 0) {
+      ward_id = wardDetail.rows[0].ward_id;
+    }
 
     if (result.rows.length > 0) {
       // Attendance record found
@@ -242,5 +250,90 @@ router.get("/image", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// Mark attendance with only photo
+router.post(
+  "/face-attendance",
+  upload.single("image"), // Single image upload
+  async (req, res) => {
+    try {
+      const { punch_type } = req.body; // "IN" or "OUT"
+
+      // 1. Face Detection
+      const searchParams = {
+        CollectionId: process.env.REKOGNITION_COLLECTION,
+        Image: { Bytes: req.file.buffer },
+        MaxFaces: 1,
+        FaceMatchThreshold: 90,
+      };
+
+      const command = new SearchFacesByImageCommand(searchParams);
+      const result = await rekognition.send(command);
+
+      // 2. Verify Match
+      if (!result.FaceMatches?.length) {
+        return res.status(401).json({
+          error: "No matching employee found",
+          suggestion: "Use manual attendance if face recognition fails",
+        });
+      }
+
+      const faceId = result.FaceMatches[0].Face.FaceId;
+
+      // 3. Find Employee
+      const { rows } = await pool.query(
+        "SELECT emp_id FROM employee WHERE face_id = $1",
+        [faceId]
+      );
+
+      if (!rows.length) {
+        return res.status(404).json({
+          error: "Employee not registered in system",
+          solution: "Register face first via /store-face",
+        });
+      }
+
+      const emp_id = rows[0].emp_id;
+      const today = new Date().toISOString().split("T")[0];
+
+      // 4. Check/Create Attendance Record (similar to your existing logic)
+      let attendance = await getOrCreateAttendanceRecord(emp_id, today);
+
+      // 5. Process Punch (IN/OUT)
+      if (punch_type === "IN" && attendance.punch_in_time) {
+        return res.status(400).json({ error: "Already punched in today" });
+      }
+      if (punch_type === "OUT" && punch_out_time) {
+        return res.status(400).json({ error: "Already punched out for today" });
+      }
+      if (punch_type === "OUT" && !punch_in_time) {
+        return res
+          .status(400)
+          .json({ error: "Punch in first before Punching out" });
+      }
+
+      // 6. Update attendance (reuse your existing update logic)
+      const updated = await processPunch(
+        attendance.attendance_id,
+        punch_type,
+        req.file.buffer // For image storage
+      );
+
+      res.json({
+        success: true,
+        employee: rows[0].name,
+        punch_type,
+        time:
+          punch_type === "IN" ? updated.punch_in_time : updated.punch_out_time,
+      });
+    } catch (error) {
+      console.error("Face attendance error:", error);
+      res.status(500).json({
+        error: "Try manual attendance if this persists",
+        fallback_route: "POST /attendance",
+      });
+    }
+  }
+);
 
 module.exports = router;

@@ -19,6 +19,7 @@ router.get("/", async (req, res) => {
        z.zone_name AS "zone", 
        c.city_name AS "city", 
        c.state AS "state", 
+	     e.face_id as "faceId",
        COUNT(CASE WHEN a.punch_in_time IS NOT NULL THEN a.attendance_id END) AS "totalAttendance"
 FROM employee e
 JOIN wards w ON e.ward_id = w.ward_id
